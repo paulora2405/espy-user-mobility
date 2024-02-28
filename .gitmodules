@@ -1,0 +1,3 @@
+[submodule "EdgeSimPy"]
+	path = EdgeSimPy
+	url = git@github.com:paulora2405/EdgeSimPy.git
