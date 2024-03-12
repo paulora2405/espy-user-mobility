@@ -1,6 +1,65 @@
 import EdgeSimPy.edge_sim_py as espy
 
 
+SERVERS_PER_SPEC_TRUSTED_PROVIDERS = 1
+SERVERS_PER_SPEC_UNTRUSTED_PROVIDER = 4
+
+# Defining specifications for container images and container registries
+CONTAINER_IMAGE_SPECIFICATIONS = [
+    {
+        "name": "alpine",
+        "tag": "latest",
+        "digest": "sha256:a777c9c66ba177ccfea23f2a216ff6721e78a662cd17019488c417135299cd89",
+        "layers": [
+            {
+                "digest": "sha256:df9b9388f04ad6279a7410b85cedfdcb2208c0a003da7ab5613af71079148139",
+                "size": 2,
+                "instruction": "ADD file:5d673d25da3a14ce1f6cf",
+            }
+        ],
+        "layers_digests": ["sha256:df9b9388f04ad6279a7410b85cedfdcb2208c0a003da7ab5613af71079148139"],
+    },
+    {
+        "name": "registry",
+        "tag": "latest",
+        "digest": "sha256:6060f78eda124040cfeb19d2fcc9af417f5ee23dc05d0894fcfe21f24c9cbf9a",
+        "layers": [
+            {
+                "digest": "sha256:df9b9388f04ad6279a7410b85cedfdcb2208c0a003da7ab5613af71079148139",
+                "size": 2,
+                "instruction": "ADD file:5d673d25da3a14ce1f6cf",
+            },
+            {
+                "digest": "sha256:b6846b9db566bc2ea5e2b0056c49772152c9b7c8f06343efb1ef764b23bb9d96",
+                "size": 5,
+                "instruction": "/bin/sh -c set -eux; \tversion=",
+            },
+        ],
+        "layers_digests": [
+            "sha256:df9b9388f04ad6279a7410b85cedfdcb2208c0a003da7ab5613af71079148139",
+            "sha256:b6846b9db566bc2ea5e2b0056c49772152c9b7c8f06343efb1ef764b23bb9d96",
+        ],
+    },
+]
+
+CONTAINER_REGISTRY_SPECIFICATIONS = [
+    {
+        "number_of_objects": 1,
+        "cpu_demand": 0,
+        "memory_demand": 0,
+        "images": [
+            {"name": "registry", "tag": "latest"},
+            {"name": "alpine", "tag": "latest"},
+        ],
+    }
+]
+
+CONTAINER_REGISTRIES = espy.create_container_registries(
+    container_registry_specifications=CONTAINER_REGISTRY_SPECIFICATIONS,
+    container_image_specifications=CONTAINER_IMAGE_SPECIFICATIONS,
+)
+
+
 def sgi_rackable_c2112_4g10() -> object:
     """Creates an EdgeServer object according to XXXX [TODO].
 
@@ -76,12 +135,6 @@ def ar585_f1() -> object:
     return edge_server
 
 
-def create_regitries():
-    espy.worst_fit_registries(container_registry_specifications=CONTAINER_REGISTRIES, servers=espy.EdgeServer.all())
-
-
-SERVERS_PER_SPEC_TRUSTED_PROVIDERS = 1
-SERVERS_PER_SPEC_UNTRUSTED_PROVIDER = 4
 PROVIDER_SPECS = [
     {
         "id": 1,
@@ -108,58 +161,3 @@ PROVIDER_SPECS = [
         ],
     },
 ]
-
-# Defining specifications for container images and container registries
-CONTAINER_IMAGE_SPECIFICATIONS = [
-    {
-        "name": "alpine",
-        "tag": "latest",
-        "digest": "sha256:a777c9c66ba177ccfea23f2a216ff6721e78a662cd17019488c417135299cd89",
-        "layers": [
-            {
-                "digest": "sha256:df9b9388f04ad6279a7410b85cedfdcb2208c0a003da7ab5613af71079148139",
-                "size": 2,
-                "instruction": "ADD file:5d673d25da3a14ce1f6cf",
-            }
-        ],
-        "layers_digests": ["sha256:df9b9388f04ad6279a7410b85cedfdcb2208c0a003da7ab5613af71079148139"],
-    },
-    {
-        "name": "registry",
-        "tag": "latest",
-        "digest": "sha256:6060f78eda124040cfeb19d2fcc9af417f5ee23dc05d0894fcfe21f24c9cbf9a",
-        "layers": [
-            {
-                "digest": "sha256:df9b9388f04ad6279a7410b85cedfdcb2208c0a003da7ab5613af71079148139",
-                "size": 2,
-                "instruction": "ADD file:5d673d25da3a14ce1f6cf",
-            },
-            {
-                "digest": "sha256:b6846b9db566bc2ea5e2b0056c49772152c9b7c8f06343efb1ef764b23bb9d96",
-                "size": 5,
-                "instruction": "/bin/sh -c set -eux; \tversion=",
-            },
-        ],
-        "layers_digests": [
-            "sha256:df9b9388f04ad6279a7410b85cedfdcb2208c0a003da7ab5613af71079148139",
-            "sha256:b6846b9db566bc2ea5e2b0056c49772152c9b7c8f06343efb1ef764b23bb9d96",
-        ],
-    },
-]
-
-CONTAINER_REGISTRY_SPECIFICATIONS = [
-    {
-        "number_of_objects": 1,
-        "cpu_demand": 0,
-        "memory_demand": 0,
-        "images": [
-            {"name": "registry", "tag": "latest"},
-            {"name": "alpine", "tag": "latest"},
-        ],
-    }
-]
-
-CONTAINER_REGISTRIES = espy.create_container_registries(
-    container_registry_specifications=CONTAINER_REGISTRY_SPECIFICATIONS,
-    container_image_specifications=CONTAINER_IMAGE_SPECIFICATIONS,
-)

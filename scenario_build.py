@@ -1,13 +1,15 @@
-import EdgeSimPy.edge_sim_py as espy
-from helper_methods import uniform
-from custom_serialization import application_to_dict, edge_server_to_dict, service_to_dict, user_to_dict
-import networkx as nx
-from map_build import COORD_UPPER_BOUND
-from servers import PROVIDER_SPECS
-import numpy as np
 import random
+
+import networkx as nx
+import numpy as np
 from sklearn.cluster import KMeans
 
+import EdgeSimPy.edge_sim_py as espy
+from custom_serialization import application_to_dict, edge_server_to_dict, service_to_dict, user_to_dict
+from helper_methods import uniform
+from servers import CONTAINER_REGISTRIES
+from map_build import COORD_UPPER_BOUND
+from servers import PROVIDER_SPECS
 
 APPLICATION_SPECIFICATIONS = [
     {"number_of_objects": 2, "number_of_services": 1},
@@ -40,12 +42,12 @@ SERVICE_DEMANDS = uniform(
 )
 
 
-def create_grid() -> list[(int, int)]:
+def create_grid() -> list[tuple[int, int]]:
     print("Creating Grid")
     return espy.hexagonal_grid(x_size=COORD_UPPER_BOUND, y_size=COORD_UPPER_BOUND)
 
 
-def create_base_stations(grid_coordinates: list[(int, int)]):
+def create_base_stations(grid_coordinates: list[tuple[int, int]]):
     print("Creating Base Stations")
     for coordinates in grid_coordinates:
         base_station = espy.BaseStation()
@@ -106,7 +108,11 @@ def create_edge_servers():
                 base_station._connect_to_edge_server(edge_server=edge_server)
 
 
-def create_providers(grid_coordinates: list[(int, int)]):
+def create_regitries():
+    espy.worst_fit_registries(container_registry_specifications=CONTAINER_REGISTRIES, servers=espy.EdgeServer.all())
+
+
+def create_providers(grid_coordinates: list[tuple[int, int]]):
     print("Creating Providers")
     # Defining user/provider trust patterns
     providers_trust_patterns = [[2, 1, 0], [1, 2, 0]]

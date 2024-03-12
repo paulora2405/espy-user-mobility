@@ -3,6 +3,7 @@ from scenario_build import (
     create_base_stations,
     create_topology,
     create_edge_servers,
+    create_regitries,
     create_providers,
     create_user_metadata,
     calc_infra_services,
@@ -18,6 +19,7 @@ def main():
     create_base_stations(grid)
     create_topology()
     create_edge_servers()
+    create_regitries()
     create_providers(grid)
     create_user_metadata()
     calc_infra_services()
