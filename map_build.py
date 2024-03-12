@@ -2,6 +2,8 @@
 import pandas as pd
 import numpy as np
 
+COORD_LOWER_BOUND, COORD_UPPER_BOUND = 0, 100
+
 
 def setup_map_dataframe():
     headers = [
@@ -54,15 +56,18 @@ def setup_map_dataframe():
     df = df.reset_index(drop=True)
 
     df_norm = df.copy()
-    lower, upper = 0, 100
 
     # TODO normalize using coord_start and coord_end of joinville
     lat_min, lat_max = df_norm.Latitude.min(), df_norm.Latitude.max()
-    df_norm.Latitude = (df_norm.Latitude - lat_min) / (lat_max - lat_min) * (upper - lower) + lower
+    df_norm.Latitude = (df_norm.Latitude - lat_min) / (lat_max - lat_min) * (
+        COORD_UPPER_BOUND - COORD_LOWER_BOUND
+    ) + COORD_LOWER_BOUND
     df_norm.Latitude = df_norm.Latitude.astype(np.int64)
 
     lon_min, lon_max = df_norm.Longitude.min(), df_norm.Longitude.max()
-    df_norm.Longitude = (df_norm.Longitude - lon_min) / (lon_max - lon_min) * (upper - lower) + lower
+    df_norm.Longitude = (df_norm.Longitude - lon_min) / (lon_max - lon_min) * (
+        COORD_UPPER_BOUND - COORD_LOWER_BOUND
+    ) + COORD_LOWER_BOUND
     df_norm.Longitude = df_norm.Longitude.astype(np.int64)
 
 
