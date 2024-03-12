@@ -177,7 +177,7 @@ def create_user_metadata():
     users = []
     for user in espy.User.all():
         user_metadata = {"object": user, "all_delays": []}
-        edge_servers = []
+        _edge_servers = []
         for edge_server in espy.EdgeServer.all():
             path = nx.shortest_path(
                 G=espy.Topology.first(),
@@ -287,7 +287,7 @@ def resource_management_algorithm(parameters):
     # We can always call the 'all()' method to get a list with all created instances of a given class
     for service in espy.Service.all():
         # We don't want to migrate services are are already being migrated
-        if service.server == None and not service.being_provisioned:
+        if service.server is None and not service.being_provisioned:
             # Let's iterate over the list of edge servers to find a suitable host for our service
             for edge_server in espy.EdgeServer.all():
                 # We must check if the edge server has enough resources to host the service
@@ -305,7 +305,7 @@ def stopping_criterion(model: object):
     for service in espy.Service.all():
         # Initially, services are not hosted by any server (i.e., their "server" attribute is None).
         # Once that value changes, we know that it has been successfully provisioned inside an edge server.
-        if service.server != None:
+        if service.server is not None:
             provisioned_services += 1
     # As EdgeSimPy will halt the simulation whenever this function returns True, its output will be a boolean expression
     # that checks if the number of provisioned services equals to the number of services spawned in our simulation
