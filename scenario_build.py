@@ -3,7 +3,7 @@ import random
 import networkx as nx
 import numpy as np
 from sklearn.cluster import KMeans
-
+from mesa import Model
 import EdgeSimPy.edge_sim_py as espy
 from custom_serialization import application_to_dict, edge_server_to_dict, service_to_dict, user_to_dict
 from helper_methods import uniform
@@ -306,7 +306,7 @@ def resource_management_algorithm(parameters):
                     break
 
 
-def stopping_criterion(model: object):
+def stopping_criterion(model: Model):
     # Defining a variable that will help us to count the number of services successfully provisioned within the infrastructure
     provisioned_services = 0
     # Iterating over the list of services to count the number of services provisioned within the infrastructure
