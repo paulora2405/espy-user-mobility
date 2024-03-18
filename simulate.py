@@ -33,7 +33,7 @@ def main():
         resource_management_algorithm=resource_management_algorithm,
     )
 
-    simulator.initialize(input_file="datasets/dataset_test.json")
+    simulator.initialize(input_file="datasets/generated_dataset.json")
 
     simulator.run_model()
 

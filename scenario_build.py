@@ -286,7 +286,9 @@ def calc_infra_providers():
     espy.User._to_dict = user_to_dict
     espy.EdgeServer._to_dict = edge_server_to_dict
     espy.Service._to_dict = service_to_dict
-    espy.ComponentManager.export_scenario(save_to_file=True, file_name="dataset_test")  # file_name is prepended with "datasets/"
+    espy.ComponentManager.export_scenario(
+        save_to_file=True, file_name="generated_dataset"
+    )  # file_name is prepended with "datasets/"
 
 
 def resource_management_algorithm(parameters):
