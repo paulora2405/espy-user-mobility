@@ -73,25 +73,25 @@ def setup_map_dataframe():
 
 def build_points_of_interest_dataframe() -> pd.DataFrame:
     # Points of interest
-    pis = []
-    pis_header = ["Latitude", "Longitude", "PeakStart", "PeakEnd", "Name"]
-    pis.append([-26.263246003308190, -48.861225375722130, 7.5, 17.5, "Doller"])
-    pis.append([-26.252990373029380, -48.854708408036230, 8, 17, "UDESC"])
-    pis.append([-26.319269027247838, -48.855449473777610, 18, 22.5, "Unisociesc"])
-    pis.append([-26.301289513710334, -48.844462116106380, 6, 8, "Terminal_Centro_Manha"])
-    pis.append([-26.301289513710334, -48.844462116106380, 17, 19, "Terminal_Centro_Tarde"])
-    pis.append([-26.273045033616377, -48.850776060285575, 6, 8, "Terminal_Norte_Manha"])
-    pis.append([-26.273045033616377, -48.850776060285575, 17, 19, "Terminal_Norte_Tarde"])
-    pis.append([-26.288328365610113, -48.810846717956740, 8, 17, "Tupy"])
-    pis.append([-26.303556261544664, -48.848987585420980, 18, 23, "Shopping_Muller"])
-    pis.append([-26.252303610588786, -48.852610343093396, 18, 23, "Shopping_Garten"])
-    pis_data = {
-        pis_header[0]: [pi[0] for pi in pis],
-        pis_header[1]: [pi[1] for pi in pis],
-        pis_header[2]: [pi[2] for pi in pis],
-        pis_header[3]: [pi[3] for pi in pis],
-        pis_header[4]: [pi[4] for pi in pis],
+    poi = []
+    poi_header = ["Latitude", "Longitude", "PeakStart", "PeakEnd", "Name"]
+    poi.append([-26.263246003308190, -48.861225375722130, 7.5, 17.5, "Doller"])
+    poi.append([-26.252990373029380, -48.854708408036230, 8, 17, "UDESC"])
+    poi.append([-26.319269027247838, -48.855449473777610, 18, 22.5, "Unisociesc"])
+    poi.append([-26.301289513710334, -48.844462116106380, 6, 8, "Terminal_Centro_Manha"])
+    poi.append([-26.301289513710334, -48.844462116106380, 17, 19, "Terminal_Centro_Tarde"])
+    poi.append([-26.273045033616377, -48.850776060285575, 6, 8, "Terminal_Norte_Manha"])
+    poi.append([-26.273045033616377, -48.850776060285575, 17, 19, "Terminal_Norte_Tarde"])
+    poi.append([-26.288328365610113, -48.810846717956740, 8, 17, "Tupy"])
+    poi.append([-26.303556261544664, -48.848987585420980, 18, 23, "Shopping_Muller"])
+    poi.append([-26.252303610588786, -48.852610343093396, 18, 23, "Shopping_Garten"])
+    poi_data = {
+        poi_header[0]: [pi[0] for pi in poi],
+        poi_header[1]: [pi[1] for pi in poi],
+        poi_header[2]: [pi[2] for pi in poi],
+        poi_header[3]: [pi[3] for pi in poi],
+        poi_header[4]: [pi[4] for pi in poi],
     }
 
-    df_pis = pd.DataFrame(data=pis_data)
-    return df_pis
+    df_poi = pd.DataFrame(data=poi_data)
+    return df_poi

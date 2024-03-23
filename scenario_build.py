@@ -2,14 +2,14 @@ import random
 
 import networkx as nx
 import numpy as np
-from sklearn.cluster import KMeans
 from mesa import Model
+from sklearn.cluster import KMeans
+
 import EdgeSimPy.edge_sim_py as espy
 from custom_serialization import application_to_dict, edge_server_to_dict, service_to_dict, user_to_dict
 from helper_methods import uniform
-from servers import CONTAINER_REGISTRIES
-from map_build import COORD_UPPER_BOUND
-from servers import PROVIDER_SPECS
+from map_build import COORD_UPPER_BOUND, build_points_of_interest_dataframe
+from servers import CONTAINER_REGISTRIES, PROVIDER_SPECS
 
 APPLICATION_SPECIFICATIONS = [
     {"number_of_objects": 2, "number_of_services": 1},
@@ -134,8 +134,9 @@ def create_providers(grid_coordinates: list[tuple[int, int]]):
                 user.delay_slas[str(app.id)] = DELAY_SLAS[user.id - 1]
 
                 # Defining user's coordinates and connecting him to a base station
-                user.mobility_model = espy.random_mobility
+                user.mobility_model = espy.point_of_interest_mobility
                 user._set_initial_position(coordinates=espy.User.random_user_placement(grid_coordinates), number_of_replicates=2)
+                user.point_of_interest = user.step_point_of_interest()
 
                 # Defining user's access pattern
                 espy.CircularDurationAndIntervalAccessPattern(
@@ -214,6 +215,16 @@ def create_user_metadata():
         print(f"{user_attrs}")
         if user_attrs["min"] > user_attrs["sla"]:
             print(f"\n\nWARNING: {user_attrs['object']} delay SLA is not achievable!\n\n")
+
+
+def create_points_of_interest():
+    df_poi = build_points_of_interest_dataframe()
+    for index, row in df_poi.iterrows():
+        poi = espy.PointOfInterest()
+        poi.coordinates = (row["Latitude"], row["Longitude"])
+        poi.peak_start = row["PeakStart"]
+        poi.peak_end = row["PeakEnd"]
+        poi.name = row["Name"]
 
 
 def calc_infra_services():

@@ -6,6 +6,7 @@ from scenario_build import (
     create_regitries,
     create_providers,
     create_user_metadata,
+    create_points_of_interest,
     calc_infra_services,
     calc_infra_providers,
     stopping_criterion,
@@ -22,6 +23,7 @@ def main():
     create_regitries()
     create_providers(grid)
     create_user_metadata()
+    create_points_of_interest()
     calc_infra_services()
     calc_infra_providers()
 
