@@ -1,11 +1,34 @@
 #!/bin/env python3
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-COORD_LOWER_BOUND, COORD_UPPER_BOUND = 0, 100
+COORD_LOWER_BOUND, COORD_UPPER_BOUND = 0, 500
+
+# The pair of coordinates correspond to two points on the map,
+# which are used to create a bounding box rectangle.
+# ---------------
+# | 1,0   -> 1,1  this one
+# |
+# | 0,0 <-   0,1  that other one
+# ---------------
+# Joinville
+BOUNDING_BOX_START = {"Latitude": -26.200431, "Longitude": -48.748822}  # TOP RIGHT coordinates
+BOUNDING_BOX_STOP = {"Latitude": -26.376193, "Longitude": -48.945546}  # BOTTOM LEFT coordinate
+# How Longitude (x) and Latitude (y) work in a x,y plane
+# y
+# | +1,-1   +1,+0   +1,+1
+# |
+# | +0,-1   +0,+0   +1,+0
+# |
+# | -1,-1   -1,+0   +1,-1
+# ----------------------- x
 
 
-def setup_map_dataframe():
+def create_edge_servers_df(csv_filepath="../datasets/geo-dataset-724.csv", bounding_box_normalization=True) -> pd.DataFrame:
+    """Returns a dataframe of Latitude and Longitude coordinates of points,
+    which will be transformed to Edge Servers, seem as grid and basestations will already be created.
+    The coordinates can be mapped 1 to 1 from square grid to hexagonal grid.
+    """
     headers = [
         "Radio",  # The generation of broadband cellular network technology (Eg. LTE, GSM)
         "MCC",  # Mobile country code. This info is publicly shared by International Telecommunication Union (link)
@@ -22,56 +45,41 @@ def setup_map_dataframe():
         "Updated",  # When a particular cell was last seen (UNIX timestamp)
         "AverageSignal",  # To get the positions of cells, OpenCelliD processes measurements from data contributors. Each measurement includes GPS location of device + Scanned cell identifier (MCC-MNC-LAC-CID) + Other device properties (Signal strength). In this process, signal strength of the device is averaged. Most ‘averageSignal’ values are 0 because OpenCelliD simply didn’t receive signal strength values.
     ]
-    df_og = pd.read_csv("../datasets/geo-dataset-724.csv", names=headers)
+    df = pd.read_csv(csv_filepath, names=headers)
 
-    # ---------------
-    # | 0,0       0,1
-    # |
-    # | 1,0       1,1
-    # ---------------
-    # Latitude, Longitude (x, y)
-    # ---------------
-    # | +1,-1   +1,+0   +1,+1
-    # |
-    # | +0,-1   +0,+0   +1,+0
-    # |
-    # | -1,-1   -1,+0   +1,-1
-    # ---------------
-    # São Paulo
-    coord_start = {"Latitude": -23.438893, "Longitude": -46.324440}
-    coord_final = {"Latitude": -23.814428, "Longitude": -46.911431}
+    df = df.loc[df.Latitude <= BOUNDING_BOX_START["Latitude"]]
+    df = df.loc[df.Longitude <= BOUNDING_BOX_START["Longitude"]]
 
-    # Joinville
-    coord_start = {"Latitude": -26.200431, "Longitude": -48.748822}
-    coord_final = {"Latitude": -26.376193, "Longitude": -48.945546}
-
-    df = df_og.copy()
-
-    df = df.loc[df.Latitude <= coord_start["Latitude"]]
-    df = df.loc[df.Longitude <= coord_start["Longitude"]]
-
-    df = df.loc[df.Latitude >= coord_final["Latitude"]]
-    df = df.loc[df.Longitude >= coord_final["Longitude"]]
+    df = df.loc[df.Latitude >= BOUNDING_BOX_STOP["Latitude"]]
+    df = df.loc[df.Longitude >= BOUNDING_BOX_STOP["Longitude"]]
 
     df = df.reset_index(drop=True)
 
     df_norm = df.copy()
 
-    # TODO normalize using coord_start and coord_end of joinville
-    lat_min, lat_max = df_norm.Latitude.min(), df_norm.Latitude.max()
-    df_norm.Latitude = (df_norm.Latitude - lat_min) / (lat_max - lat_min) * (
+    LAT_MIN, LAT_MAX = 0.0, 0.0
+    LON_MIN, LON_MAX = 0.0, 0.0
+    if bounding_box_normalization:
+        LAT_MIN, LAT_MAX = BOUNDING_BOX_STOP["Latitude"], BOUNDING_BOX_START["Latitude"]
+        LON_MIN, LON_MAX = BOUNDING_BOX_STOP["Longitude"], BOUNDING_BOX_START["Longitude"]
+    else:
+        LAT_MIN, LAT_MAX = df_norm.Latitude.min(), df_norm.Latitude.max()
+        LON_MIN, LON_MAX = df_norm.Longitude.min(), df_norm.Longitude.max()
+
+    df_norm.Latitude = (df_norm.Latitude - LAT_MIN) / (LAT_MAX - LAT_MIN) * (
         COORD_UPPER_BOUND - COORD_LOWER_BOUND
     ) + COORD_LOWER_BOUND
     df_norm.Latitude = df_norm.Latitude.astype(np.int64)
 
-    lon_min, lon_max = df_norm.Longitude.min(), df_norm.Longitude.max()
-    df_norm.Longitude = (df_norm.Longitude - lon_min) / (lon_max - lon_min) * (
+    df_norm.Longitude = (df_norm.Longitude - LON_MIN) / (LON_MAX - LON_MIN) * (
         COORD_UPPER_BOUND - COORD_LOWER_BOUND
     ) + COORD_LOWER_BOUND
     df_norm.Longitude = df_norm.Longitude.astype(np.int64)
 
+    return df_norm[["Latitude", "Longitude"]]
 
-def build_points_of_interest_dataframe() -> pd.DataFrame:
+
+def create_points_of_interest_df(bounding_box_normalization=True) -> pd.DataFrame:
     # Points of interest
     poi = []
     poi_header = ["Latitude", "Longitude", "PeakStart", "PeakEnd", "Name"]
@@ -94,4 +102,45 @@ def build_points_of_interest_dataframe() -> pd.DataFrame:
     }
 
     df_poi = pd.DataFrame(data=poi_data)
+
+    LAT_MIN, LAT_MAX = 0.0, 0.0
+    LON_MIN, LON_MAX = 0.0, 0.0
+    if bounding_box_normalization:
+        LAT_MIN, LAT_MAX = BOUNDING_BOX_STOP["Latitude"], BOUNDING_BOX_START["Latitude"]
+        LON_MIN, LON_MAX = BOUNDING_BOX_STOP["Longitude"], BOUNDING_BOX_START["Longitude"]
+    else:
+        LAT_MIN, LAT_MAX = df_poi.Latitude.min(), df_poi.Latitude.max()
+        LON_MIN, LON_MAX = df_poi.Longitude.min(), df_poi.Longitude.max()
+
+    df_poi.Latitude = (df_poi.Latitude - LAT_MIN) / (LAT_MAX - LAT_MIN) * (
+        COORD_UPPER_BOUND - COORD_LOWER_BOUND
+    ) + COORD_LOWER_BOUND
+    df_poi.Latitude = df_poi.Latitude.astype(np.int64)
+
+    df_poi.Longitude = (df_poi.Longitude - LON_MIN) / (LON_MAX - LON_MIN) * (
+        COORD_UPPER_BOUND - COORD_LOWER_BOUND
+    ) + COORD_LOWER_BOUND
+    df_poi.Longitude = df_poi.Longitude.astype(np.int64)
+
     return df_poi
+
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
+    df_edgeservers = create_edge_servers_df("./datasets/geo-dataset-724.csv")
+    df_pois = create_points_of_interest_df()
+    # Create a figure and axis object
+    fig, ax = plt.subplots()
+    plot_size = 12
+    fig.set_size_inches(plot_size, plot_size)
+    # Plot the coordinates as a map
+    for i, coord in enumerate(df_edgeservers.Latitude):
+        ax.plot([df_edgeservers.Longitude[i]], [df_edgeservers.Latitude[i]], "o", markersize=2, color="blue")
+    for i, coord in enumerate(df_pois.Latitude):
+        ax.plot([df_pois.Longitude[i]], [df_pois.Latitude[i]], "o", markersize=8, color="red")
+    # Set the axis labels
+    ax.set_xlabel("Normalized Longitude")
+    ax.set_ylabel("Normalized Latitude")
+    # Show the plot
+    plt.show()

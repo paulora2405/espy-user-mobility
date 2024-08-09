@@ -8,7 +8,7 @@ from sklearn.cluster import KMeans
 import EdgeSimPy.edge_sim_py as espy
 from custom_serialization import application_to_dict, edge_server_to_dict, service_to_dict, user_to_dict
 from helper_methods import uniform
-from map_build import COORD_UPPER_BOUND, build_points_of_interest_dataframe
+from map_build import COORD_UPPER_BOUND, create_edge_servers_df, create_points_of_interest_df
 from servers import CONTAINER_REGISTRIES, PROVIDER_SPECS
 
 APPLICATION_SPECIFICATIONS = [
@@ -218,7 +218,7 @@ def create_user_metadata():
 
 
 def create_points_of_interest():
-    df_poi = build_points_of_interest_dataframe()
+    df_poi = create_points_of_interest_df()
     for index, row in df_poi.iterrows():
         poi = espy.PointOfInterest()
         poi.coordinates = (row["Latitude"], row["Longitude"])
