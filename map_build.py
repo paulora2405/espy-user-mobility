@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 
-COORD_LOWER_BOUND, COORD_UPPER_BOUND = 0, 500
+COORD_LOWER_BOUND, COORD_UPPER_BOUND = 0, 100
 
 # The pair of coordinates correspond to two points on the map,
 # which are used to create a bounding box rectangle.
@@ -24,7 +24,7 @@ BOUNDING_BOX_STOP = {"Latitude": -26.376193, "Longitude": -48.945546}  # BOTTOM 
 # ----------------------- x
 
 
-def create_edge_servers_df(csv_filepath="../datasets/geo-dataset-724.csv", bounding_box_normalization=True) -> pd.DataFrame:
+def create_edge_servers_df(csv_filepath="./datasets/geo-dataset-724.csv", bounding_box_normalization=True) -> pd.DataFrame:
     """Returns a dataframe of Latitude and Longitude coordinates of points,
     which will be transformed to Edge Servers, seem as grid and basestations will already be created.
     The coordinates can be mapped 1 to 1 from square grid to hexagonal grid.
@@ -47,11 +47,11 @@ def create_edge_servers_df(csv_filepath="../datasets/geo-dataset-724.csv", bound
     ]
     df = pd.read_csv(csv_filepath, names=headers)
 
-    df = df.loc[df.Latitude <= BOUNDING_BOX_START["Latitude"]]
     df = df.loc[df.Longitude <= BOUNDING_BOX_START["Longitude"]]
+    df = df.loc[df.Latitude <= BOUNDING_BOX_START["Latitude"]]
 
-    df = df.loc[df.Latitude >= BOUNDING_BOX_STOP["Latitude"]]
     df = df.loc[df.Longitude >= BOUNDING_BOX_STOP["Longitude"]]
+    df = df.loc[df.Latitude >= BOUNDING_BOX_STOP["Latitude"]]
 
     df = df.reset_index(drop=True)
 
@@ -60,23 +60,26 @@ def create_edge_servers_df(csv_filepath="../datasets/geo-dataset-724.csv", bound
     LAT_MIN, LAT_MAX = 0.0, 0.0
     LON_MIN, LON_MAX = 0.0, 0.0
     if bounding_box_normalization:
-        LAT_MIN, LAT_MAX = BOUNDING_BOX_STOP["Latitude"], BOUNDING_BOX_START["Latitude"]
         LON_MIN, LON_MAX = BOUNDING_BOX_STOP["Longitude"], BOUNDING_BOX_START["Longitude"]
+        LAT_MIN, LAT_MAX = BOUNDING_BOX_STOP["Latitude"], BOUNDING_BOX_START["Latitude"]
     else:
-        LAT_MIN, LAT_MAX = df_norm.Latitude.min(), df_norm.Latitude.max()
         LON_MIN, LON_MAX = df_norm.Longitude.min(), df_norm.Longitude.max()
-
-    df_norm.Latitude = (df_norm.Latitude - LAT_MIN) / (LAT_MAX - LAT_MIN) * (
-        COORD_UPPER_BOUND - COORD_LOWER_BOUND
-    ) + COORD_LOWER_BOUND
-    df_norm.Latitude = df_norm.Latitude.astype(np.int64)
+        LAT_MIN, LAT_MAX = df_norm.Latitude.min(), df_norm.Latitude.max()
 
     df_norm.Longitude = (df_norm.Longitude - LON_MIN) / (LON_MAX - LON_MIN) * (
         COORD_UPPER_BOUND - COORD_LOWER_BOUND
     ) + COORD_LOWER_BOUND
     df_norm.Longitude = df_norm.Longitude.astype(np.int64)
 
-    return df_norm[["Latitude", "Longitude"]]
+    df_norm.Latitude = (df_norm.Latitude - LAT_MIN) / (LAT_MAX - LAT_MIN) * (
+        COORD_UPPER_BOUND - COORD_LOWER_BOUND
+    ) + COORD_LOWER_BOUND
+    df_norm.Latitude = df_norm.Latitude.astype(np.int64)
+
+    df_dedup = df_norm.drop_duplicates(subset=["Longitude", "Latitude"], ignore_index=True)
+    df_dedup = df_dedup[["Longitude", "Latitude"]]
+
+    return translate_to_hexagonal_grid(df_dedup)
 
 
 def create_points_of_interest_df(bounding_box_normalization=True) -> pd.DataFrame:
@@ -106,41 +109,76 @@ def create_points_of_interest_df(bounding_box_normalization=True) -> pd.DataFram
     LAT_MIN, LAT_MAX = 0.0, 0.0
     LON_MIN, LON_MAX = 0.0, 0.0
     if bounding_box_normalization:
-        LAT_MIN, LAT_MAX = BOUNDING_BOX_STOP["Latitude"], BOUNDING_BOX_START["Latitude"]
         LON_MIN, LON_MAX = BOUNDING_BOX_STOP["Longitude"], BOUNDING_BOX_START["Longitude"]
+        LAT_MIN, LAT_MAX = BOUNDING_BOX_STOP["Latitude"], BOUNDING_BOX_START["Latitude"]
     else:
         LAT_MIN, LAT_MAX = df_poi.Latitude.min(), df_poi.Latitude.max()
         LON_MIN, LON_MAX = df_poi.Longitude.min(), df_poi.Longitude.max()
-
-    df_poi.Latitude = (df_poi.Latitude - LAT_MIN) / (LAT_MAX - LAT_MIN) * (
-        COORD_UPPER_BOUND - COORD_LOWER_BOUND
-    ) + COORD_LOWER_BOUND
-    df_poi.Latitude = df_poi.Latitude.astype(np.int64)
 
     df_poi.Longitude = (df_poi.Longitude - LON_MIN) / (LON_MAX - LON_MIN) * (
         COORD_UPPER_BOUND - COORD_LOWER_BOUND
     ) + COORD_LOWER_BOUND
     df_poi.Longitude = df_poi.Longitude.astype(np.int64)
 
-    return df_poi
+    df_poi.Latitude = (df_poi.Latitude - LAT_MIN) / (LAT_MAX - LAT_MIN) * (
+        COORD_UPPER_BOUND - COORD_LOWER_BOUND
+    ) + COORD_LOWER_BOUND
+    df_poi.Latitude = df_poi.Latitude.astype(np.int64)
+
+    return translate_to_hexagonal_grid(df_poi)
+
+
+def translate_to_hexagonal_grid(df: pd.DataFrame) -> pd.DataFrame:
+    def add_one_to_odd_latitude(row):
+        if row["Latitude"] % 2 != 0:
+            if row["Longitude"] + 1 <= COORD_UPPER_BOUND:
+                return row["Longitude"] + 1
+            else:
+                return row["Longitude"] - 1
+        else:
+            return row["Longitude"]
+
+    if "Longitude" in df.columns and "Latitude" in df.columns:
+        df["Longitude"] = df["Longitude"] * 2
+        df["Longitude"] = df.apply(add_one_to_odd_latitude, axis=1)
+        return df
+    else:
+        raise Exception("Dataframe does not contain both 'Latitude' and 'Longitude' columns")
+
+
+def to_tuple_list(df: pd.DataFrame) -> list[tuple[int, int]]:
+    if "Longitude" in df.columns and "Latitude" in df.columns:
+        return list(zip(df["Longitude"], df["Latitude"]))
+    else:
+        raise Exception("Dataframe does not contain both 'Latitude' and 'Longitude' columns")
 
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
+    import EdgeSimPy.edge_sim_py as espy
+    from scenario_build import create_base_stations, create_grid
+
     df_edgeservers = create_edge_servers_df("./datasets/geo-dataset-724.csv")
     df_pois = create_points_of_interest_df()
+    grid = create_grid()
+    create_base_stations(grid)
+    base_stations = espy.BaseStation.all()
+    bs_coords = [b.coordinates for b in base_stations]
     # Create a figure and axis object
     fig, ax = plt.subplots()
     plot_size = 12
     fig.set_size_inches(plot_size, plot_size)
     # Plot the coordinates as a map
-    for i, coord in enumerate(df_edgeservers.Latitude):
-        ax.plot([df_edgeservers.Longitude[i]], [df_edgeservers.Latitude[i]], "o", markersize=2, color="blue")
     for i, coord in enumerate(df_pois.Latitude):
         ax.plot([df_pois.Longitude[i]], [df_pois.Latitude[i]], "o", markersize=8, color="red")
+    for i, coord in enumerate(df_edgeservers.Latitude):
+        ax.plot([df_edgeservers.Longitude[i]], [df_edgeservers.Latitude[i]], "o", markersize=3, color="blue")
+    for coord in bs_coords:
+        ax.plot([coord[0]], [coord[1]], "o", markersize=1, color="green")
     # Set the axis labels
     ax.set_xlabel("Normalized Longitude")
     ax.set_ylabel("Normalized Latitude")
     # Show the plot
+    plt.tight_layout(pad=0.1)
     plt.show()
