@@ -1,4 +1,5 @@
 import random
+import sys
 
 import networkx as nx
 import numpy as np
@@ -6,9 +7,9 @@ from mesa import Model
 from sklearn.cluster import KMeans
 
 import EdgeSimPy.edge_sim_py as espy
+import map_build
 from custom_serialization import application_to_dict, edge_server_to_dict, service_to_dict, user_to_dict
 from helper_methods import uniform
-from map_build import COORD_UPPER_BOUND, create_edge_servers_df, create_points_of_interest_df
 from servers import CONTAINER_REGISTRIES, PROVIDER_SPECS
 
 APPLICATION_SPECIFICATIONS = [
@@ -44,7 +45,7 @@ SERVICE_DEMANDS = uniform(
 
 def create_grid() -> list[tuple[int, int]]:
     print("Creating Grid")
-    return espy.hexagonal_grid(x_size=COORD_UPPER_BOUND, y_size=COORD_UPPER_BOUND)
+    return espy.hexagonal_grid(x_size=map_build.COORD_UPPER_BOUND, y_size=map_build.COORD_UPPER_BOUND)
 
 
 def create_base_stations(grid_coordinates: list[tuple[int, int]]):
@@ -61,7 +62,7 @@ def create_topology() -> espy.Topology:
     print("Creating Topology")
     return espy.partially_connected_hexagonal_mesh(
         network_nodes=espy.NetworkSwitch.all(),
-        link_specifications=[{"number_of_objects": 29601, "delay": 1, "bandwidth": 10}],
+        link_specifications=[{"delay": 1, "bandwidth": 10}],
     )
 
 
@@ -71,24 +72,15 @@ def create_edge_servers():
     number_of_edge_servers = 0
     for provider in PROVIDER_SPECS:
         number_of_edge_servers += sum([spec["number_of_objects"] for spec in provider["edge_server_specs"]])
-    kmeans = KMeans(init="k-means++", n_init=100, n_clusters=number_of_edge_servers, random_state=0, max_iter=1000).fit(
-        [switch.coordinates for switch in espy.NetworkSwitch.all()]
-    )
-    # node_clusters = list(kmeans.labels_)
-    edge_server_coordinates = []
-    for centroid in list(kmeans.cluster_centers_):
-        node_closest_to_centroid = sorted(
-            espy.NetworkSwitch.all(),
-            key=lambda switch: np.linalg.norm(np.array(switch.coordinates) - np.array([centroid[0], centroid[1]])),
-        )[0]
-        edge_server_coordinates.append(node_closest_to_centroid.coordinates)
-    edge_server_coordinates = random.sample(edge_server_coordinates, len(edge_server_coordinates))
+
+    edge_servers_df = map_build.create_edge_servers_df()
+    edge_server_coordinates = random.sample(map_build.to_tuple_list(edge_servers_df), number_of_edge_servers)
 
     for provider_spec in PROVIDER_SPECS:
         for edge_server_spec in provider_spec["edge_server_specs"]:
             for _ in range(edge_server_spec["number_of_objects"]):
                 # Creating the edge server object
-                edge_server = edge_server_spec["spec"]()
+                edge_server = edge_server_spec["spec"]()  # This calls espy.EdgeServer()
 
                 # Defining the maximum number of layers that the edge server can pull simultaneously
                 edge_server.max_concurrent_layer_downloads = 3
@@ -182,10 +174,16 @@ def create_user_metadata():
     print("Creating User Metadata")
     # Calculating the network delay between users and edge servers (useful for defining reasonable delay SLAs)
     users = []
-    for user in espy.User.all():
+    all_users = espy.User.all()
+    for i_users, user in enumerate(all_users):
         user_metadata = {"object": user, "all_delays": []}
         _edge_servers = []
-        for edge_server in espy.EdgeServer.all():
+        all_edgeservers = espy.EdgeServer.all()
+        for i_edgeservers, edge_server in enumerate(all_edgeservers):
+            if i_edgeservers % 10 == 0:
+                sys.stdout.write("\r")
+                sys.stdout.write(f"{i_edgeservers:04d}/{len(all_edgeservers)} of {i_users:02d}/{len(all_users)}")
+                sys.stdout.flush()
             path = nx.shortest_path(
                 G=espy.Topology.first(),
                 source=user.base_station.network_switch,
@@ -193,6 +191,8 @@ def create_user_metadata():
                 weight="delay",
             )
             user_metadata["all_delays"].append(espy.Topology.first().calculate_path_delay(path=path))
+        sys.stdout.write("\r")
+        sys.stdout.flush()
         user_metadata["min_delay"] = min(user_metadata["all_delays"])
         user_metadata["max_delay"] = max(user_metadata["all_delays"])
         user_metadata["avg_delay"] = sum(user_metadata["all_delays"]) / len(user_metadata["all_delays"])
@@ -201,6 +201,8 @@ def create_user_metadata():
             user_metadata["delays"][delay] = user_metadata["all_delays"].count(delay)
 
         users.append(user_metadata)
+    sys.stdout.write("\r")
+    sys.stdout.flush()
 
     print("\n\n==== NETWORK DISTANCE (DELAY) BETWEEN USERS AND EDGE SERVERS ====")
     for user_metadata in users:
@@ -218,10 +220,10 @@ def create_user_metadata():
 
 
 def create_points_of_interest():
-    df_poi = create_points_of_interest_df()
+    df_poi = map_build.create_points_of_interest_df()
     for index, row in df_poi.iterrows():
         poi = espy.PointOfInterest()
-        poi.coordinates = (row["Latitude"], row["Longitude"])
+        poi.coordinates = (row["Longitude"], row["Latitude"])
         poi.peak_start = row["PeakStart"]
         poi.peak_end = row["PeakEnd"]
         poi.name = row["Name"]
