@@ -1,18 +1,18 @@
-from scenario_build import (
-    create_grid,
-    create_base_stations,
-    create_topology,
-    create_edge_servers,
-    create_regitries,
-    create_providers,
-    create_user_metadata,
-    create_points_of_interest,
-    calc_infra_services,
-    calc_infra_providers,
-    stopping_criterion,
-    resource_management_algorithm,
-)
 import EdgeSimPy.edge_sim_py as espy
+from scenario_build import (
+    calc_infra_providers,
+    calc_infra_services,
+    create_base_stations,
+    create_edge_servers,
+    create_grid,
+    create_points_of_interest,
+    create_providers,
+    create_regitries,
+    create_topology,
+    create_user_metadata,
+    resource_management_algorithm,
+    stopping_criterion,
+)
 
 
 def main():
@@ -35,8 +35,10 @@ def main():
         resource_management_algorithm=resource_management_algorithm,
     )
 
+    print("Initializing simulation")
     simulator.initialize(input_file="datasets/generated_dataset.json")
 
+    print("Running model")
     simulator.run_model()
 
 
