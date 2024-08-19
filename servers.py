@@ -1,8 +1,7 @@
 import EdgeSimPy.edge_sim_py as espy
 
-
-SERVERS_PER_SPEC_TRUSTED_PROVIDERS = 1
-SERVERS_PER_SPEC_UNTRUSTED_PROVIDER = 4
+SERVERS_PER_SPEC_TRUSTED_PROVIDERS = 100
+SERVERS_PER_SPEC_UNTRUSTED_PROVIDER = 400
 
 # Defining specifications for container images and container registries
 CONTAINER_IMAGE_SPECIFICATIONS = [
