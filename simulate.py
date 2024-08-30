@@ -1,3 +1,5 @@
+import os
+
 import EdgeSimPy.edge_sim_py as espy
 from scenario_build import (
     calc_infra_providers,
@@ -10,22 +12,28 @@ from scenario_build import (
     create_regitries,
     create_topology,
     create_user_metadata,
+    export_scenario,
     resource_management_algorithm,
     stopping_criterion,
 )
 
 
 def main():
-    grid = create_grid()
-    create_base_stations(grid)
-    create_topology()
-    create_edge_servers()
-    create_regitries()
-    create_providers(grid)
-    create_user_metadata()
-    create_points_of_interest()
-    calc_infra_services()
-    calc_infra_providers()
+    if not os.path.exists("datasets/generated_dataset.json"):
+        print("Generating dataset")
+        grid = create_grid()
+        create_base_stations(grid)
+        create_topology()
+        create_edge_servers()
+        create_regitries()
+        create_providers(grid)
+        create_user_metadata()
+        create_points_of_interest()
+        calc_infra_services()
+        calc_infra_providers()
+        export_scenario()
+    else:
+        print("Using existing dataset")
 
     simulator = espy.Simulator(
         dump_interval=5,

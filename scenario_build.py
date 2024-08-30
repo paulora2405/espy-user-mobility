@@ -294,6 +294,8 @@ def calc_infra_providers():
         print(f"\tUsers with trust 1: {len(users_with_trust1)}. CPU Demand: {demand_trust1}")
         print(f"\tUsers with trust 2: {len(users_with_trust2)}. CPU Demand: {demand_trust2}\n")
 
+
+def export_scenario():
     # Exporting scenario
     espy.Application._to_dict = application_to_dict
     espy.User._to_dict = user_to_dict
