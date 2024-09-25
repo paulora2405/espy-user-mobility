@@ -115,33 +115,40 @@ def create_providers(grid_coordinates: list[tuple[int, int]]):
                 app = espy.Application()
                 app.provisioned = False
 
-                # Creating the user that access the application
-                user = espy.User()
+                for _ in range(random.randint(1, 3)):
+                    # Creating the user that access the application
+                    user = espy.User()
 
-                # Defining user trust on the providers
-                user.providers_trust = {1: provider_trust_pattern[0], 2: provider_trust_pattern[1], 3: provider_trust_pattern[2]}
+                    # Defining user trust on the providers
+                    user.providers_trust = {
+                        1: provider_trust_pattern[0],
+                        2: provider_trust_pattern[1],
+                        3: provider_trust_pattern[2],
+                    }
 
-                user.communication_paths[str(app.id)] = None
-                user.delays[str(app.id)] = None
-                user.delay_slas[str(app.id)] = DELAY_SLAS[user.id - 1]
+                    user.communication_paths[str(app.id)] = None
+                    user.delays[str(app.id)] = None
+                    user.delay_slas[str(app.id)] = DELAY_SLAS[(user.id - 1) % len(DELAY_SLAS)]
 
-                # Defining user's coordinates and connecting him to a base station
-                user.mobility_model = espy.point_of_interest_mobility
-                user._set_initial_position(coordinates=espy.User.random_user_placement(grid_coordinates), number_of_replicates=2)
-                user.point_of_interest = user.step_point_of_interest()
+                    # Defining user's coordinates and connecting him to a base station
+                    user.mobility_model = espy.point_of_interest_mobility
+                    user._set_initial_position(
+                        coordinates=espy.User.random_user_placement(grid_coordinates), number_of_replicates=2
+                    )
+                    user.point_of_interest = user.step_point_of_interest()
 
-                # Defining user's access pattern
-                espy.CircularDurationAndIntervalAccessPattern(
-                    user=user,
-                    app=app,
-                    start=1,
-                    duration_values=[float("inf")],
-                    interval_values=[0],
-                )
+                    # Defining user's access pattern
+                    espy.CircularDurationAndIntervalAccessPattern(
+                        user=user,
+                        app=app,
+                        start=1,
+                        duration_values=[float("inf")],
+                        interval_values=[0],
+                    )
 
-                # Defining the relationship attributes between the user and the application
-                user.applications.append(app)
-                app.users.append(user)
+                    # Defining the relationship attributes between the user and the application
+                    user.applications.append(app)
+                    app.users.append(user)
 
                 # Defining service privacy requirement values
                 service_privacy_requirements = uniform(
@@ -304,32 +311,3 @@ def export_scenario():
     espy.ComponentManager.export_scenario(
         save_to_file=True, file_name="generated_dataset"
     )  # file_name is prepended with "datasets/"
-
-
-def resource_management_algorithm(parameters):
-    # We can always call the 'all()' method to get a list with all created instances of a given class
-    for service in espy.Service.all():
-        # We don't want to migrate services are are already being migrated
-        if service.server is None and not service.being_provisioned:
-            # Let's iterate over the list of edge servers to find a suitable host for our service
-            for edge_server in espy.EdgeServer.all():
-                # We must check if the edge server has enough resources to host the service
-                if edge_server.has_capacity_to_host(service=service):
-                    # Start provisioning the service in the edge server
-                    service.provision(target_server=edge_server)
-                    # After start migrating the service we can move on to the next service
-                    break
-
-
-def stopping_criterion(model: Model):
-    # Defining a variable that will help us to count the number of services successfully provisioned within the infrastructure
-    provisioned_services = 0
-    # Iterating over the list of services to count the number of services provisioned within the infrastructure
-    for service in espy.Service.all():
-        # Initially, services are not hosted by any server (i.e., their "server" attribute is None).
-        # Once that value changes, we know that it has been successfully provisioned inside an edge server.
-        if service.server is not None:
-            provisioned_services += 1
-    # As EdgeSimPy will halt the simulation whenever this function returns True, its output will be a boolean expression
-    # that checks if the number of provisioned services equals to the number of services spawned in our simulation
-    return provisioned_services == espy.Service.count()

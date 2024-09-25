@@ -1,6 +1,7 @@
 import os
 
 import EdgeSimPy.edge_sim_py as espy
+from algorithms import resource_management_algorithm, stopping_criterion
 from scenario_build import (
     calc_infra_providers,
     calc_infra_services,
@@ -13,8 +14,6 @@ from scenario_build import (
     create_topology,
     create_user_metadata,
     export_scenario,
-    resource_management_algorithm,
-    stopping_criterion,
 )
 
 
@@ -38,7 +37,7 @@ def main():
     simulator = espy.Simulator(
         dump_interval=5,
         tick_duration=1,
-        tick_unit="seconds",
+        tick_unit="minutes",
         stopping_criterion=stopping_criterion,
         resource_management_algorithm=resource_management_algorithm,
     )
@@ -48,6 +47,8 @@ def main():
 
     print("Running model")
     simulator.run_model()
+
+    print("Simulation finished")
 
 
 if __name__ == "__main__":
