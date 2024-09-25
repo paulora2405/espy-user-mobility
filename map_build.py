@@ -2,6 +2,8 @@
 import numpy as np
 import pandas as pd
 
+from EdgeSimPy.edge_sim_py.components.point_of_interest import DAY_START_IN_MINUTES
+
 COORD_LOWER_BOUND, COORD_UPPER_BOUND = 0, 100
 
 # The pair of coordinates correspond to two points on the map,
@@ -76,26 +78,30 @@ def create_edge_servers_df(csv_filepath="./datasets/geo-dataset-724.csv", boundi
     ) + COORD_LOWER_BOUND
     df_norm.Latitude = df_norm.Latitude.astype(np.int64)
 
-    df_dedup = df_norm.drop_duplicates(subset=["Longitude", "Latitude"], ignore_index=True)
-    df_dedup = df_dedup[["Longitude", "Latitude"]]
+    df_translated = translate_to_hexagonal_grid(df_norm)
+    df_translated = df_translated[["Longitude", "Latitude"]]
+    df_translated = df_translated.drop_duplicates(subset=["Longitude", "Latitude"], ignore_index=True)
 
-    return translate_to_hexagonal_grid(df_dedup)
+    return df_translated
 
 
 def create_points_of_interest_df(bounding_box_normalization=True) -> pd.DataFrame:
     # Points of interest
     poi = []
     poi_header = ["Latitude", "Longitude", "PeakStart", "PeakEnd", "Name"]
-    poi.append([-26.263246003308190, -48.861225375722130, 7.5, 17.5, "Doller"])
-    poi.append([-26.252990373029380, -48.854708408036230, 8, 17, "UDESC"])
-    poi.append([-26.319269027247838, -48.855449473777610, 18, 22.5, "Unisociesc"])
-    poi.append([-26.301289513710334, -48.844462116106380, 6, 8, "Terminal_Centro_Manha"])
-    poi.append([-26.301289513710334, -48.844462116106380, 17, 19, "Terminal_Centro_Tarde"])
-    poi.append([-26.273045033616377, -48.850776060285575, 6, 8, "Terminal_Norte_Manha"])
-    poi.append([-26.273045033616377, -48.850776060285575, 17, 19, "Terminal_Norte_Tarde"])
-    poi.append([-26.288328365610113, -48.810846717956740, 8, 17, "Tupy"])
-    poi.append([-26.303556261544664, -48.848987585420980, 18, 23, "Shopping_Muller"])
-    poi.append([-26.252303610588786, -48.852610343093396, 18, 23, "Shopping_Garten"])
+    poi.append([-26.263246003308190, -48.861225375722130, 07.5, 17.5, "Doller"])
+    poi.append([-26.252990373029380, -48.854708408036230, 08.0, 17.0, "UDESC"])
+    poi.append([-26.319269027247838, -48.855449473777610, 18.0, 22.5, "Unisociesc"])
+    poi.append([-26.301289513710334, -48.844462116106380, 06.0, 08.0, "Terminal_Centro_Manha"])
+    poi.append([-26.301289513710334, -48.844462116106380, 17.0, 19.0, "Terminal_Centro_Tarde"])
+    poi.append([-26.273045033616377, -48.850776060285575, 06.0, 08.0, "Terminal_Norte_Manha"])
+    poi.append([-26.273045033616377, -48.850776060285575, 17.0, 19.0, "Terminal_Norte_Tarde"])
+    poi.append([-26.288328365610113, -48.810846717956740, 08.0, 17.0, "Tupy"])
+    poi.append([-26.303556261544664, -48.848987585420980, 18.0, 23.0, "Shopping_Muller"])
+    poi.append([-26.252303610588786, -48.852610343093396, 18.0, 23.0, "Shopping_Garten"])
+    for p in poi:  # transform hours to minutes
+        p[2] = p[2] * 60 - DAY_START_IN_MINUTES
+        p[3] = p[3] * 60 - DAY_START_IN_MINUTES
     poi_data = {
         poi_header[0]: [pi[0] for pi in poi],
         poi_header[1]: [pi[1] for pi in poi],
