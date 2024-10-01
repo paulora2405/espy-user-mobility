@@ -106,10 +106,8 @@ def create_regitries():
 
 def create_providers(grid_coordinates: list[tuple[int, int]]):
     print("Creating Providers")
-    # Defining user/provider trust patterns
-    providers_trust_patterns = [[2, 1, 0], [1, 2, 0]]
 
-    for provider_trust_pattern in providers_trust_patterns:
+    for _ in range(2):
         for app_spec in APPLICATION_SPECIFICATIONS:
             for _ in range(app_spec["number_of_objects"]):
                 app = espy.Application()
@@ -118,13 +116,6 @@ def create_providers(grid_coordinates: list[tuple[int, int]]):
                 for _ in range(random.randint(1, 3)):
                     # Creating the user that access the application
                     user = espy.User()
-
-                    # Defining user trust on the providers
-                    user.providers_trust = {
-                        1: provider_trust_pattern[0],
-                        2: provider_trust_pattern[1],
-                        3: provider_trust_pattern[2],
-                    }
 
                     user.communication_paths[str(app.id)] = None
                     user.delays[str(app.id)] = None
@@ -271,35 +262,6 @@ def calc_infra_services():
     print("Overall Occupation")
     print(f"\tCPU: {overall_cpu_occupation}%")
     print(f"\tRAM: {overall_memory_occupation}%")
-
-
-def calc_infra_providers():
-    print("Creating Calculating Infrastructure Providers")
-    # Calculating the occupation of each infrastructure provider
-    print("==== INFRASTRUCTURE PROVIDERS OVERVIEW ====")
-    for provider_id in range(1, len(PROVIDER_SPECS) + 1):
-        provider_edge_servers = [s for s in espy.EdgeServer.all() if s.infrastructure_provider == provider_id]
-
-        users_with_trust0 = [user for user in espy.User.all() if user.providers_trust[provider_id] == 0]
-        users_with_trust1 = [user for user in espy.User.all() if user.providers_trust[provider_id] == 1]
-        users_with_trust2 = [user for user in espy.User.all() if user.providers_trust[provider_id] == 2]
-
-        demand_trust0 = sum(
-            [sum([s.cpu_demand for s in u.applications[0].services if s.privacy_requirement == 0]) for u in users_with_trust0]
-        )
-        demand_trust1 = sum(
-            [sum([s.cpu_demand for s in u.applications[0].services if s.privacy_requirement == 0]) for u in users_with_trust1]
-        )
-        demand_trust2 = sum(
-            [sum([s.cpu_demand for s in u.applications[0].services if s.privacy_requirement == 0]) for u in users_with_trust2]
-        )
-
-        print(f"=== Provider {provider_id} ===")
-        print(f"Overall CPU: {sum([s.cpu for s in provider_edge_servers])}")
-        print(f"Overall RAM: {sum([s.memory for s in provider_edge_servers])}")
-        print(f"\tUsers with trust 0: {len(users_with_trust0)}. CPU Demand: {demand_trust0}")
-        print(f"\tUsers with trust 1: {len(users_with_trust1)}. CPU Demand: {demand_trust1}")
-        print(f"\tUsers with trust 2: {len(users_with_trust2)}. CPU Demand: {demand_trust2}\n")
 
 
 def export_scenario():

@@ -3,7 +3,6 @@ import os
 import EdgeSimPy.edge_sim_py as espy
 from algorithms import resource_management_algorithm, stopping_criterion
 from scenario_build import (
-    calc_infra_providers,
     calc_infra_services,
     create_base_stations,
     create_edge_servers,
@@ -29,7 +28,6 @@ def main():
         create_user_metadata()
         create_points_of_interest()
         calc_infra_services()
-        calc_infra_providers()
         export_scenario()
     else:
         print("Using existing dataset")

@@ -1,8 +1,10 @@
-import random
-import networkx as nx
-import EdgeSimPy.edge_sim_py as espy
 import copy
+import random
+
 import matplotlib.pyplot as plt
+import networkx as nx
+
+import EdgeSimPy.edge_sim_py as espy
 
 
 def display_topology(topology: nx.Graph, output_filename: str = "topology"):
@@ -89,7 +91,6 @@ def user_to_dict(self) -> dict:
             "delay_slas": copy.deepcopy(self.delay_slas),
             "communication_paths": copy.deepcopy(self.communication_paths),
             "making_requests": copy.deepcopy(self.making_requests),
-            "providers_trust": copy.deepcopy(self.providers_trust),
         },
         "relationships": {
             "access_patterns": access_patterns,
