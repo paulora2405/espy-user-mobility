@@ -10,8 +10,14 @@ def resource_management_algorithm(parameters):
     service: espy.Service
     for service in espy.Service.all():
         if service.server is None and not service.being_provisioned:
-            for edge_server in espy.EdgeServer.all():
+            # TODO: sort edge server by a best fit objective function (current capacity - service demand)
+            edge_servers = espy.EdgeServer.all()
+            edge_servers.sort(key=lambda x: x.cpu - service.cpu_demand)  # TODO: implement edge_server.py:capacity_score()
+            edge_server: espy.EdgeServer
+            for edge_server in edge_servers:
                 if edge_server.has_capacity_to_host(service=service):
+                    if edge_server.model_name == "CLOUD":
+                        print("Migrating service to cloud")
                     service.provision(target_server=edge_server)
                     break
 
@@ -27,24 +33,30 @@ def resource_management_algorithm(parameters):
                     edge_server.has_capacity_to_host(service=service)
                     and distance_from_edge_server_to_users(service, edge_server) < service.total_dist_from_users
                 ):
+                    if edge_server.model_name == "CLOUD":
+                        print("Migrating service to cloud")
                     service.provision(target_server=edge_server)
                     break
 
 
 def distance_from_edge_server_to_users(service: espy.Service, edge_server: espy.EdgeServer) -> float:
-    users: list[espy.User] = service.application.users
-    total_distance_from_users: float = 0
-    max_distance: int = 0
-    for user in users:
-        curr_distance = nx.shortest_path_length(
-            G=edge_server.model.topology,
-            source=edge_server.base_station.network_switch,
-            target=user.base_station.network_switch,
-        )
-        total_distance_from_users += curr_distance
-        if curr_distance > max_distance:
-            max_distance = curr_distance
-    return total_distance_from_users / (len(users) * max_distance)
+    # TODO: extract to separate method
+    total_distance_from_users: float = 0.0
+    max_distance: float = 0.0
+    if service.server is not None and len(service.application.users) > 0:
+        for user in service.application.users:
+            curr_distance: float = nx.shortest_path_length(
+                G=service.model.topology,
+                source=service.server.base_station.network_switch,
+                weight="delay",
+                method="dijkstra",
+                target=user.base_station.network_switch,
+            )
+            total_distance_from_users += curr_distance
+            if curr_distance > max_distance:
+                max_distance = curr_distance
+        total_distance_from_users = total_distance_from_users / (len(service.application.users) * max_distance)
+    return total_distance_from_users
 
 
 # Algorithm 1: Application Reallocation algorithm reallocateApps()

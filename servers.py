@@ -2,6 +2,7 @@ import EdgeSimPy.edge_sim_py as espy
 
 SERVERS_PER_SPEC_TRUSTED_PROVIDERS = 100
 SERVERS_PER_SPEC_UNTRUSTED_PROVIDER = 400
+SERVERS_PER_SPEC_CLOUD_PROVIDERS = 4  # must have an integer square root
 
 # Defining specifications for container images and container registries
 CONTAINER_IMAGE_SPECIFICATIONS = [
@@ -71,9 +72,9 @@ def sgi_rackable_c2112_4g10() -> object:
 
     # Computational capacity (CPU in cores, RAM memory in megabytes, and disk in megabytes)
     edge_server.cpu = 32
-    edge_server.memory = 32768
-    edge_server.disk = 1048576
-    edge_server.mips = 2750
+    edge_server.memory = 32_768
+    edge_server.disk = 1_048_576
+    edge_server.mips = 2_750
 
     # Power-related attributes
     edge_server.power_model_parameters = {
@@ -96,9 +97,9 @@ def proliant_dl360_gen9() -> object:
 
     # Computational capacity (CPU in cores, RAM memory in megabytes, and disk in megabytes)
     edge_server.cpu = 36
-    edge_server.memory = 65536
-    edge_server.disk = 1048576
-    edge_server.mips = 3000
+    edge_server.memory = 65_536
+    edge_server.disk = 1_048_576
+    edge_server.mips = 3_000
 
     # Power-related attributes
     edge_server.power_model_parameters = {
@@ -121,9 +122,9 @@ def ar585_f1() -> object:
 
     # Computational capacity (CPU in cores, RAM memory in megabytes, and disk in megabytes)
     edge_server.cpu = 48
-    edge_server.memory = 65536
-    edge_server.disk = 1048576
-    edge_server.mips = 3500
+    edge_server.memory = 65_536
+    edge_server.disk = 1_048_576
+    edge_server.mips = 3_500
 
     # Power-related attributes
     edge_server.power_model_parameters = {
@@ -132,6 +133,30 @@ def ar585_f1() -> object:
     }
 
     return edge_server
+
+
+def cloud_server() -> object:
+    """Creates an CloudServer object according to XXXX [TODO].
+
+    Returns:
+        cloud_server (object): Created CloudServer object.
+    """
+    cloud_server = espy.EdgeServer()
+    cloud_server.model_name = "CLOUD"
+
+    # Computational capacity (CPU in cores, RAM memory in megabytes, and disk in megabytes)
+    cloud_server.cpu = 480
+    cloud_server.memory = 4_398_046  # 4TiB
+    cloud_server.disk = 17_592_186  # 16TiB
+    cloud_server.mips = 35_000
+
+    # Power-related attributes
+    cloud_server.power_model_parameters = {
+        "static_power_percentage": 1000 / 7000,
+        "max_power_consumption": 7000,
+    }
+
+    return cloud_server
 
 
 PROVIDER_SPECS = [
@@ -157,6 +182,12 @@ PROVIDER_SPECS = [
             {"spec": sgi_rackable_c2112_4g10, "number_of_objects": SERVERS_PER_SPEC_UNTRUSTED_PROVIDER},
             {"spec": proliant_dl360_gen9, "number_of_objects": SERVERS_PER_SPEC_UNTRUSTED_PROVIDER},
             {"spec": ar585_f1, "number_of_objects": SERVERS_PER_SPEC_UNTRUSTED_PROVIDER},
+        ],
+    },
+    {
+        "id": 4,
+        "cloud_server_specs": [
+            {"spec": cloud_server, "number_of_objects": SERVERS_PER_SPEC_CLOUD_PROVIDERS},
         ],
     },
 ]

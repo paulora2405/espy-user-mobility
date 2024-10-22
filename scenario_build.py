@@ -1,5 +1,6 @@
 import random
 import sys
+from math import sqrt
 
 import networkx as nx
 import numpy as np
@@ -10,7 +11,7 @@ import EdgeSimPy.edge_sim_py as espy
 import map_build
 from custom_serialization import application_to_dict, edge_server_to_dict, service_to_dict, user_to_dict
 from helper_methods import uniform
-from servers import CONTAINER_REGISTRIES, PROVIDER_SPECS
+from servers import CONTAINER_REGISTRIES, PROVIDER_SPECS, SERVERS_PER_SPEC_CLOUD_PROVIDERS
 
 APPLICATION_SPECIFICATIONS = [
     {"number_of_objects": 2, "number_of_services": 1},
@@ -30,11 +31,12 @@ SERVICE_DEMAND_VALUES = [
     {"cpu": 4, "memory": 4 * 1024},
     {"cpu": 8, "memory": 8 * 1024},
     {"cpu": 16, "memory": 16 * 1024},
+    {"cpu": 50, "memory": 16 * 1024},  # TESTING: force service to go to cloud server
 ]
 
-NUMBER_OF_SERVICES = (
-    sum([app_spec["number_of_objects"] * app_spec["number_of_services"] for app_spec in APPLICATION_SPECIFICATIONS]) * 2
-)
+NUMBER_OF_SERVICES = sum(
+    [app_spec["number_of_objects"] * app_spec["number_of_services"] for app_spec in APPLICATION_SPECIFICATIONS]
+) * len(PROVIDER_SPECS)
 
 SERVICE_DEMANDS = uniform(
     n_items=NUMBER_OF_SERVICES,
@@ -42,14 +44,31 @@ SERVICE_DEMANDS = uniform(
     shuffle_distribution=True,
 )
 
+USERS_MIN, USERS_MAX = 1, 10
+USER_SPEED_MIN, USER_SPEED_MAX = 1, 3
+NUMBER_OF_CLOUD_BASE_STATIONS = SERVERS_PER_SPEC_CLOUD_PROVIDERS  # must have an integer square root
+CLOUD_GRID_OFFSET = 10
 
-def create_grid() -> list[tuple[int, int]]:
+
+def create_grid(x_size: int | None = None, y_size: int | None = None) -> list[tuple[int, int]]:
     print("Creating Grid")
-    return espy.hexagonal_grid(x_size=map_build.COORD_UPPER_BOUND, y_size=map_build.COORD_UPPER_BOUND)
+    return espy.hexagonal_grid(
+        x_size=map_build.COORD_UPPER_BOUND if x_size is None else x_size,
+        y_size=map_build.COORD_UPPER_BOUND if y_size is None else y_size,
+    )
 
 
 def create_base_stations(grid_coordinates: list[tuple[int, int]]):
     print("Creating Base Stations")
+    # # Creating Cloud base stations
+    # last_cell = grid_coordinates[-1]
+    # for i in range(NUMBER_OF_CLOUD_BASE_STATIONS):
+    #     grid_coordinates.append(
+    #         (
+    #             last_cell[0] - (1 * ((i * 2) + 1)),  # x
+    #             last_cell[1] + (1 * ((i // last_cell[1]) + 1)),  # y
+    #         )
+    #     )
     for coordinates in grid_coordinates:
         base_station = espy.BaseStation()
         base_station.coordinates = coordinates
@@ -66,19 +85,63 @@ def create_topology() -> espy.Topology:
     )
 
 
+def create_cloud_servers(edge_topology: espy.Topology, edge_grid: list[tuple[int, int]]):
+    print("Creating Cloud Base Stations and Switches")
+    x_offset = max([coord[0] for coord in edge_grid]) + CLOUD_GRID_OFFSET
+    y_offset = max([coord[1] for coord in edge_grid]) + CLOUD_GRID_OFFSET
+    grid_size = int(sqrt(NUMBER_OF_CLOUD_BASE_STATIONS))
+    cloud_coordinates = create_grid(x_size=grid_size, y_size=grid_size)
+    cloud_coordinates = [(coord[0] + x_offset, coord[1] + y_offset) for coord in cloud_coordinates]
+
+    last_edge_switch = espy.NetworkSwitch.last()
+
+    cloud_switches = []
+    for coordinates in cloud_coordinates:
+        cloud_base_station = espy.BaseStation()
+        cloud_base_station.coordinates = coordinates
+        cloud_base_station.wireless_delay = 5
+        network_switch: espy.NetworkSwitch = espy.sample_switch()  # type: ignore
+        cloud_switches.append(network_switch)
+        cloud_base_station._connect_to_network_switch(network_switch=network_switch)
+
+    print("Creating Cloud Topology")
+    edge_topology.add_nodes_from(cloud_switches)
+    for cloud_switch in cloud_switches:
+        if not edge_topology.has_edge(cloud_switch, last_edge_switch):
+            link = espy.NetworkLink()
+            link.topology = edge_topology
+            link.delay = 10
+            link.bandwidth = 100
+            link.nodes = [cloud_switch, last_edge_switch]
+            edge_topology.add_edge(cloud_switch, last_edge_switch)
+            edge_topology._adj[cloud_switch][last_edge_switch] = link
+            edge_topology._adj[last_edge_switch][cloud_switch] = link
+
+    print("Creating Cloud Servers")
+    for provider_spec in PROVIDER_SPECS:
+        for cloud_server_spec in provider_spec.get("cloud_server_specs", []):
+            for i in range(cloud_server_spec["number_of_objects"]):
+                cloud_server = cloud_server_spec["spec"]()
+                cloud_server.max_concurrent_layer_downloads = 3
+                cloud_server.power_model = espy.LinearServerPowerModel
+                cloud_server.infrastructure_provider = provider_spec["id"]
+                base_station: espy.BaseStation = espy.BaseStation.find_by("coordinates", cloud_coordinates[i])  # type: ignore
+                base_station._connect_to_edge_server(edge_server=cloud_server)
+
+
 def create_edge_servers():
     print("Creating Edge Servers")
     # Creating clusters of network switches based on the number of specified edge servers
     number_of_edge_servers = 0
     for provider in PROVIDER_SPECS:
-        number_of_edge_servers += sum([spec["number_of_objects"] for spec in provider["edge_server_specs"]])
+        number_of_edge_servers += sum([spec["number_of_objects"] for spec in provider.get("edge_server_specs", [])])
 
     edge_servers_df = map_build.create_edge_servers_df()
     edge_server_coordinates = random.sample(map_build.to_tuple_list(edge_servers_df), number_of_edge_servers)
 
     for provider_spec in PROVIDER_SPECS:
-        for edge_server_spec in provider_spec["edge_server_specs"]:
-            for _ in range(edge_server_spec["number_of_objects"]):
+        for edge_server_spec in provider_spec.get("edge_server_specs", []):
+            for i in range(edge_server_spec["number_of_objects"]):
                 # Creating the edge server object
                 edge_server = edge_server_spec["spec"]()  # This calls espy.EdgeServer()
 
@@ -95,7 +158,7 @@ def create_edge_servers():
                 # base_stations_without_edge_servers = [bs for bs in BaseStation.all() if len(bs.edge_servers) == 0]
                 # base_station = random.sample(base_stations_without_edge_servers, 1)[0]
                 base_station: espy.BaseStation = espy.BaseStation.find_by(
-                    attribute_name="coordinates", attribute_value=edge_server_coordinates[edge_server.id - 1]
+                    attribute_name="coordinates", attribute_value=edge_server_coordinates[i]
                 )  # type: ignore
                 base_station._connect_to_edge_server(edge_server=edge_server)
 
@@ -107,13 +170,13 @@ def create_regitries():
 def create_providers(grid_coordinates: list[tuple[int, int]]):
     print("Creating Providers")
 
-    for _ in range(2):
+    for _ in range(len(PROVIDER_SPECS)):
         for app_spec in APPLICATION_SPECIFICATIONS:
             for _ in range(app_spec["number_of_objects"]):
                 app = espy.Application()
                 app.provisioned = False
 
-                for _ in range(random.randint(1, 3)):
+                for _ in range(random.randint(USERS_MIN, USERS_MAX)):
                     # Creating the user that access the application
                     user = espy.User()
 
@@ -123,8 +186,11 @@ def create_providers(grid_coordinates: list[tuple[int, int]]):
 
                     # Defining user's coordinates and connecting him to a base station
                     user.mobility_model = espy.point_of_interest_mobility
+                    user.chance_of_becoming_interested = 40
+                    user.movement_distance = random.randint(USER_SPEED_MIN, USER_SPEED_MAX)
                     user._set_initial_position(
-                        coordinates=espy.User.random_user_placement(grid_coordinates), number_of_replicates=2
+                        coordinates=espy.User.random_user_placement(grid_coordinates),  # TODO: review this tuple vs list issue
+                        number_of_replicates=2,
                     )
                     user.point_of_interest = user.step_point_of_interest()
 
@@ -168,55 +234,6 @@ def create_providers(grid_coordinates: list[tuple[int, int]]):
                     app.connect_to_service(service)
 
 
-def create_user_metadata():
-    print("Creating User Metadata")
-    # Calculating the network delay between users and edge servers (useful for defining reasonable delay SLAs)
-    users = []
-    all_users = espy.User.all()
-    for i_users, user in enumerate(all_users):
-        user_metadata = {"object": user, "all_delays": []}
-        _edge_servers = []
-        all_edgeservers = espy.EdgeServer.all()
-        for i_edgeservers, edge_server in enumerate(all_edgeservers):
-            if i_edgeservers % 10 == 0:
-                sys.stdout.write("\r")
-                sys.stdout.write(f"{i_edgeservers:04d}/{len(all_edgeservers)} of {i_users:02d}/{len(all_users)}")
-                sys.stdout.flush()
-            path = nx.shortest_path(
-                G=espy.Topology.first(),
-                source=user.base_station.network_switch,
-                target=edge_server.network_switch,
-                weight="delay",
-            )
-            user_metadata["all_delays"].append(espy.Topology.first().calculate_path_delay(path=path))
-        sys.stdout.write("\r")
-        sys.stdout.flush()
-        user_metadata["min_delay"] = min(user_metadata["all_delays"])
-        user_metadata["max_delay"] = max(user_metadata["all_delays"])
-        user_metadata["avg_delay"] = sum(user_metadata["all_delays"]) / len(user_metadata["all_delays"])
-        user_metadata["delays"] = {}
-        for delay in sorted(list(set(user_metadata["all_delays"]))):
-            user_metadata["delays"][delay] = user_metadata["all_delays"].count(delay)
-
-        users.append(user_metadata)
-    sys.stdout.write("\r")
-    sys.stdout.flush()
-
-    print("\n\n==== NETWORK DISTANCE (DELAY) BETWEEN USERS AND EDGE SERVERS ====")
-    for user_metadata in users:
-        user_attrs = {
-            "object": user_metadata["object"],
-            "sla": user_metadata["object"].delay_slas[str(user_metadata["object"].applications[0].id)],
-            "min": user_metadata["min_delay"],
-            "max": user_metadata["max_delay"],
-            "avg": round(user_metadata["avg_delay"]),
-            "delays": user_metadata["delays"],
-        }
-        print(f"{user_attrs}")
-        if user_attrs["min"] > user_attrs["sla"]:
-            print(f"\n\nWARNING: {user_attrs['object']} delay SLA is not achievable!\n\n")
-
-
 def create_points_of_interest():
     df_poi = map_build.create_points_of_interest_df()
     for index, row in df_poi.iterrows():
@@ -225,43 +242,6 @@ def create_points_of_interest():
         poi.peak_start = row["PeakStart"]
         poi.peak_end = row["PeakEnd"]
         poi.name = row["Name"]
-
-
-def calc_infra_services():
-    print("Creating Calculating Infrastructure services")
-    # Calculating the infrastructure occupation and information about the services
-    edge_server_cpu_capacity = 0
-    edge_server_memory_capacity = 0
-    service_cpu_demand = 0
-    service_memory_demand = 0
-
-    for edge_server in espy.EdgeServer.all():
-        edge_server_cpu_capacity += edge_server.cpu
-        edge_server_memory_capacity += edge_server.memory
-
-    for service in espy.Service.all():
-        service_cpu_demand += service.cpu_demand
-        service_memory_demand += service.memory_demand
-
-    overall_cpu_occupation = round((service_cpu_demand / edge_server_cpu_capacity) * 100, 1)
-    overall_memory_occupation = round((service_memory_demand / edge_server_memory_capacity) * 100, 1)
-
-    print("\n\n==== INFRASTRUCTURE OCCUPATION OVERVIEW ====")
-    print(f"Edge Servers: {espy.EdgeServer.count()}")
-    print(f"\tCPU Capacity: {edge_server_cpu_capacity}")
-    print(f"\tRAM Capacity: {edge_server_memory_capacity}")
-    print(f"Services: {espy.Service.count()}")
-    print(f"\tCPU Demand: {service_cpu_demand}")
-    print(f"\t\t[Privacy Requirement = 0] {sum([s.cpu_demand for s in espy.Service.all() if s.privacy_requirement == 0])}")
-    print(f"\t\t[Privacy Requirement = 1] {sum([s.cpu_demand for s in espy.Service.all() if s.privacy_requirement == 1])}")
-    print(f"\t\t[Privacy Requirement = 2] {sum([s.cpu_demand for s in espy.Service.all() if s.privacy_requirement == 2])}")
-    print(f"\tRAM Demand: {service_memory_demand}")
-    print(f"\t\t[Privacy Requirement = 0] {sum([s.memory_demand for s in espy.Service.all() if s.privacy_requirement == 0])}")
-    print(f"\t\t[Privacy Requirement = 1] {sum([s.memory_demand for s in espy.Service.all() if s.privacy_requirement == 1])}")
-    print(f"\t\t[Privacy Requirement = 2] {sum([s.memory_demand for s in espy.Service.all() if s.privacy_requirement == 2])}")
-    print("Overall Occupation")
-    print(f"\tCPU: {overall_cpu_occupation}%")
-    print(f"\tRAM: {overall_memory_occupation}%")
 
 
 def export_scenario():

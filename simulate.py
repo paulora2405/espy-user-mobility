@@ -3,15 +3,14 @@ import os
 import EdgeSimPy.edge_sim_py as espy
 from algorithms import resource_management_algorithm, stopping_criterion
 from scenario_build import (
-    calc_infra_services,
     create_base_stations,
+    create_cloud_servers,
     create_edge_servers,
     create_grid,
     create_points_of_interest,
     create_providers,
     create_regitries,
     create_topology,
-    create_user_metadata,
     export_scenario,
 )
 
@@ -21,13 +20,12 @@ def main():
         print("Generating dataset")
         grid = create_grid()
         create_base_stations(grid)
-        create_topology()
+        topology = create_topology()
+        create_cloud_servers(topology, grid)
         create_edge_servers()
         create_regitries()
         create_providers(grid)
-        create_user_metadata()
         create_points_of_interest()
-        calc_infra_services()
         export_scenario()
     else:
         print("Using existing dataset")
