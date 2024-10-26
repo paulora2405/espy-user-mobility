@@ -8,7 +8,8 @@
             "name": "ESPY: simulate.py",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/simulate.py",
+            "module": "espy_user_mobility.simulate",
+            "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"
         }
     ]
