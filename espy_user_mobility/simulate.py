@@ -1,4 +1,5 @@
 import os
+import time
 
 import EdgeSimPy.edge_sim_py as espy
 
@@ -19,6 +20,7 @@ from .scenario_build import (
 def main():
     if not os.path.exists("datasets/generated_dataset.json"):
         print("Generating dataset")
+        start_time = time.time()
         grid = create_grid()
         create_base_stations(grid)
         topology = create_topology()
@@ -28,6 +30,7 @@ def main():
         create_providers(grid)
         create_points_of_interest()
         export_scenario()
+        print(f"Dataset generated in {time.time() - start_time} seconds")
     else:
         print("Using existing dataset")
 
@@ -40,12 +43,14 @@ def main():
     )
 
     print("Initializing simulation")
+    start_time = time.time()
     simulator.initialize(input_file="datasets/generated_dataset.json")
+    print(f"Initialization finished in {time.time() - start_time} seconds")
 
     print("Running model")
+    start_time = time.time()
     simulator.run_model()
-
-    print("Simulation finished")
+    print(f"Simulation finished in {time.time() - start_time} seconds")
 
 
 if __name__ == "__main__":
