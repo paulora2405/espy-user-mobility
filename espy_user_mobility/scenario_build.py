@@ -32,7 +32,7 @@ SERVICE_DEMAND_VALUES = [
     {"cpu": 4, "memory": 4 * 1024},
     {"cpu": 8, "memory": 8 * 1024},
     {"cpu": 16, "memory": 16 * 1024},
-    {"cpu": 50, "memory": 16 * 1024},  # TESTING: force service to go to cloud server
+    {"cpu": 50, "memory": 32 * 1024},  # TESTING: force service to go to cloud server
 ]
 
 NUMBER_OF_SERVICES = sum(
@@ -49,6 +49,10 @@ USERS_MIN, USERS_MAX = 1, 10
 USER_SPEED_MIN, USER_SPEED_MAX = 1, 3
 NUMBER_OF_CLOUD_BASE_STATIONS = SERVERS_PER_SPEC_CLOUD_PROVIDERS  # must have an integer square root
 CLOUD_GRID_OFFSET = 10
+CLOUD_LINK_DELAY = 10
+CLOUD_LINK_BANDWIDTH = 100
+EDGE_LINK_DELAY = 1
+EDGE_LINK_BANDWIDTH = 10
 
 
 def create_grid(x_size: int | None = None, y_size: int | None = None) -> list[tuple[int, int]]:
@@ -60,33 +64,24 @@ def create_grid(x_size: int | None = None, y_size: int | None = None) -> list[tu
 
 
 def create_base_stations(grid_coordinates: list[tuple[int, int]]):
-    print("Creating Base Stations")
-    # # Creating Cloud base stations
-    # last_cell = grid_coordinates[-1]
-    # for i in range(NUMBER_OF_CLOUD_BASE_STATIONS):
-    #     grid_coordinates.append(
-    #         (
-    #             last_cell[0] - (1 * ((i * 2) + 1)),  # x
-    #             last_cell[1] + (1 * ((i // last_cell[1]) + 1)),  # y
-    #         )
-    #     )
+    print("Creating Edge Base Stations")
     for coordinates in grid_coordinates:
         base_station = espy.BaseStation()
         base_station.coordinates = coordinates
-        base_station.wireless_delay = 1
+        base_station.wireless_delay = 1  # type: ignore
         network_switch = espy.sample_switch()
         base_station._connect_to_network_switch(network_switch=network_switch)
 
 
 def create_topology() -> espy.Topology:
-    print("Creating Topology")
+    print("Creating Edge Topology")
     return espy.partially_connected_hexagonal_mesh(
         network_nodes=espy.NetworkSwitch.all(),
-        link_specifications=[{"delay": 1, "bandwidth": 10}],
+        link_specifications=[{"delay": EDGE_LINK_DELAY, "bandwidth": EDGE_LINK_BANDWIDTH}],
     )
 
 
-def create_cloud_servers(edge_topology: espy.Topology, edge_grid: list[tuple[int, int]]):
+def create_cloud_servers(edge_topology: espy.Topology, edge_grid: list[tuple[int, int]]) -> list[tuple[int, int]]:
     print("Creating Cloud Base Stations and Switches")
     x_offset = max([coord[0] for coord in edge_grid]) + CLOUD_GRID_OFFSET
     y_offset = max([coord[1] for coord in edge_grid]) + CLOUD_GRID_OFFSET
@@ -94,13 +89,19 @@ def create_cloud_servers(edge_topology: espy.Topology, edge_grid: list[tuple[int
     cloud_coordinates = create_grid(x_size=grid_size, y_size=grid_size)
     cloud_coordinates = [(coord[0] + x_offset, coord[1] + y_offset) for coord in cloud_coordinates]
 
-    last_edge_switch = espy.NetworkSwitch.last()
+    # max_y = max([switch.coordinates[1] for switch in espy.NetworkSwitch.all()])
+    max_y = edge_grid[-1][1]
+    max_y_switches = [switch for switch in espy.NetworkSwitch.all() if switch.coordinates[1] == max_y]
+    max_y_switches_sorted = sorted(max_y_switches, key=lambda s: s.coordinates[0])
+    middle_switch = max_y_switches_sorted[len(max_y_switches_sorted) // 2]
+    # edge_connection_to_cloud = espy.NetworkSwitch.last()
+    edge_connection_to_cloud = middle_switch
 
     cloud_switches = []
     for coordinates in cloud_coordinates:
         cloud_base_station = espy.BaseStation()
         cloud_base_station.coordinates = coordinates
-        cloud_base_station.wireless_delay = 5
+        cloud_base_station.wireless_delay = 5  # type: ignore
         network_switch: espy.NetworkSwitch = espy.sample_switch()  # type: ignore
         cloud_switches.append(network_switch)
         cloud_base_station._connect_to_network_switch(network_switch=network_switch)
@@ -108,15 +109,25 @@ def create_cloud_servers(edge_topology: espy.Topology, edge_grid: list[tuple[int
     print("Creating Cloud Topology")
     edge_topology.add_nodes_from(cloud_switches)
     for cloud_switch in cloud_switches:
-        if not edge_topology.has_edge(cloud_switch, last_edge_switch):
+        if not edge_topology.has_edge(cloud_switch, edge_connection_to_cloud):
             link = espy.NetworkLink()
             link.topology = edge_topology
-            link.delay = 10
-            link.bandwidth = 100
-            link.nodes = [cloud_switch, last_edge_switch]
-            edge_topology.add_edge(cloud_switch, last_edge_switch)
-            edge_topology._adj[cloud_switch][last_edge_switch] = link
-            edge_topology._adj[last_edge_switch][cloud_switch] = link
+            link.delay = CLOUD_LINK_DELAY
+            link.bandwidth = CLOUD_LINK_BANDWIDTH
+            link.nodes = [cloud_switch, edge_connection_to_cloud]
+            edge_topology.add_edge(cloud_switch, edge_connection_to_cloud)
+            edge_topology._adj[cloud_switch][edge_connection_to_cloud] = link
+            edge_topology._adj[edge_connection_to_cloud][cloud_switch] = link
+        for sec_cloud_switch in cloud_switches:
+            if cloud_switch != sec_cloud_switch and not edge_topology.has_edge(cloud_switch, sec_cloud_switch):
+                link = espy.NetworkLink()
+                link.topology = edge_topology
+                link.delay = CLOUD_LINK_DELAY
+                link.bandwidth = CLOUD_LINK_BANDWIDTH
+                link.nodes = [cloud_switch, sec_cloud_switch]
+                edge_topology.add_edge(cloud_switch, sec_cloud_switch)
+                edge_topology._adj[cloud_switch][sec_cloud_switch] = link
+                edge_topology._adj[sec_cloud_switch][cloud_switch] = link
 
     print("Creating Cloud Servers")
     for provider_spec in PROVIDER_SPECS:
@@ -128,6 +139,9 @@ def create_cloud_servers(edge_topology: espy.Topology, edge_grid: list[tuple[int
                 cloud_server.infrastructure_provider = provider_spec["id"]
                 base_station: espy.BaseStation = espy.BaseStation.find_by("coordinates", cloud_coordinates[i])  # type: ignore
                 base_station._connect_to_edge_server(edge_server=cloud_server)
+
+    edge_grid.extend(cloud_coordinates)
+    return edge_grid
 
 
 def create_edge_servers():
@@ -175,7 +189,7 @@ def create_providers(grid_coordinates: list[tuple[int, int]]):
         for app_spec in APPLICATION_SPECIFICATIONS:
             for _ in range(app_spec["number_of_objects"]):
                 app = espy.Application()
-                app.provisioned = False
+                app.provisioned = False  # type: ignore
 
                 for _ in range(random.randint(USERS_MIN, USERS_MAX)):
                     # Creating the user that access the application
@@ -190,7 +204,7 @@ def create_providers(grid_coordinates: list[tuple[int, int]]):
                     user.chance_of_becoming_interested = 40
                     user.movement_distance = random.randint(USER_SPEED_MIN, USER_SPEED_MAX)
                     user._set_initial_position(
-                        coordinates=espy.User.random_user_placement(grid_coordinates),  # TODO: review this tuple vs list issue
+                        coordinates=espy.User.random_user_placement(grid_coordinates),  # type: ignore  # TODO: review this tuple vs list issue
                         number_of_replicates=2,
                     )
                     user.point_of_interest = user.step_point_of_interest()
@@ -221,13 +235,13 @@ def create_providers(grid_coordinates: list[tuple[int, int]]):
 
                     # Creating the service object
                     service = espy.Service(
-                        image_digest=service_image.digest,
-                        cpu_demand=None,
-                        memory_demand=None,
+                        image_digest=service_image.digest,  # type: ignore
+                        cpu_demand=None,  # type: ignore
+                        memory_demand=None,  # type: ignore
                         label="Alpine",
                         state=0,
                     )
-                    service.privacy_requirement = service_privacy_requirements[service_index]
+                    service.privacy_requirement = service_privacy_requirements[service_index]  # type: ignore
                     service.cpu_demand = SERVICE_DEMANDS[service.id - 1]["cpu"]
                     service.memory_demand = SERVICE_DEMANDS[service.id - 1]["memory"]
 
