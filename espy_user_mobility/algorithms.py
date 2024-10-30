@@ -3,7 +3,7 @@ from mesa import Model
 from EdgeSimPy import edge_sim_py as espy
 
 
-def resource_management_algorithm(_parameters):
+def resource_management_algorithm(parameters):
     DISTANCE_THRESHOLD = 0.8
     MIGRATION_RECENCY_THRESHOLD = 10
 
@@ -38,4 +38,4 @@ def resource_management_algorithm(_parameters):
 
 def stopping_criterion(model: Model):
     provisioned_services = sum(1 for service in espy.Service.all() if service.server is not None)
-    return provisioned_services == espy.Service.count() and model.schedule.steps > 1200
+    return provisioned_services == espy.Service.count() and model.schedule.steps > 1200  # type: ignore
