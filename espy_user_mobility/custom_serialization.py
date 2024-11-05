@@ -72,7 +72,7 @@ def application_to_dict(self) -> dict:
 
 
 # User -> providers_trust
-def user_to_dict(self) -> dict:
+def user_to_dict(self: espy.User) -> dict:
     """Method that overrides the way User objects are formatted to JSON."
 
     Returns:
@@ -87,9 +87,11 @@ def user_to_dict(self) -> dict:
             "id": self.id,
             "coordinates": self.coordinates,
             "coordinates_trace": self.coordinates_trace,
-            "delays": copy.deepcopy(self.delays),
-            "delay_slas": copy.deepcopy(self.delay_slas),
-            "communication_paths": copy.deepcopy(self.communication_paths),
+            "movement_distance": self.movement_distance,
+            "chance_of_becoming_interested": self.chance_of_becoming_interested,
+            # "delays": copy.deepcopy(self.delays),
+            # "delay_slas": copy.deepcopy(self.delay_slas),
+            # "communication_paths": copy.deepcopy(self.communication_paths),
             "making_requests": copy.deepcopy(self.making_requests),
         },
         "relationships": {
@@ -97,13 +99,14 @@ def user_to_dict(self) -> dict:
             "mobility_model": self.mobility_model.__name__,
             "applications": [{"class": type(app).__name__, "id": app.id} for app in self.applications],
             "base_station": {"class": type(self.base_station).__name__, "id": self.base_station.id},
+            "poi": copy.deepcopy(self.point_of_interest),
         },
     }
     return dictionary
 
 
 # EdgeServer -> infrastructure_provider
-def edge_server_to_dict(self) -> dict:
+def edge_server_to_dict(self: espy.EdgeServer) -> dict:
     """Method that overrides the way EdgeServer objects are formatted to JSON."
 
     Returns:
@@ -144,7 +147,7 @@ def edge_server_to_dict(self) -> dict:
 
 
 # Service -> privacy_requirement
-def service_to_dict(self) -> dict:
+def service_to_dict(self: espy.Service) -> dict:
     """Method that overrides the way Service objects are formatted to JSON."
 
     Returns:
@@ -160,6 +163,7 @@ def service_to_dict(self) -> dict:
             "memory_demand": self.memory_demand,
             "image_digest": self.image_digest,
             "privacy_requirement": self.privacy_requirement,
+            "total_dist_from_users": self.total_dist_from_users,
         },
         "relationships": {
             "application": {"class": type(self.application).__name__, "id": self.application.id},
