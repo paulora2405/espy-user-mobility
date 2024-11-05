@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "ESPY: simulate.py",
+            "name": "ESPY: Simulation",
             "type": "debugpy",
             "request": "launch",
-            "module": "espy_user_mobility.simulate",
+            "program": "${workspaceFolder}/main.py",
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"
         }
