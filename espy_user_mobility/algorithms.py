@@ -15,8 +15,6 @@ def resource_management_algorithm(parameters):
         if service.server is None and not service.being_provisioned:
             for edge_server in edge_servers:
                 if edge_server.has_capacity_to_host(service=service):
-                    if edge_server.model_name == "CLOUD":
-                        print("Migrating service to cloud")
                     service.provision(target_server=edge_server)
                     break
         # Reallocation
@@ -30,12 +28,10 @@ def resource_management_algorithm(parameters):
                     edge_server.has_capacity_to_host(service=service)
                     and service.distance_from_edge_server_to_users(edge_server) < service.total_dist_from_users
                 ):
-                    if edge_server.model_name == "CLOUD":
-                        print("Migrating service to cloud")
                     service.provision(target_server=edge_server)
                     break
 
 
 def stopping_criterion(model: Model):
     provisioned_services = sum(1 for service in espy.Service.all() if service.server is not None)
-    return provisioned_services == espy.Service.count() and model.schedule.steps > 1200  # type: ignore
+    return provisioned_services == espy.Service.count() and model.schedule.steps >= 300  # type: ignore
