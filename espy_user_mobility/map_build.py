@@ -92,16 +92,16 @@ def create_points_of_interest_df(bounding_box_normalization=True) -> pd.DataFram
     poi.append([-26.263246003308190, -48.861225375722130, 07.5, 17.5, "Doller"])
     poi.append([-26.252990373029380, -48.854708408036230, 08.0, 17.0, "UDESC"])
     poi.append([-26.319269027247838, -48.855449473777610, 18.0, 22.5, "Unisociesc"])
-    poi.append([-26.301289513710334, -48.844462116106380, 06.0, 08.0, "Terminal_Centro_Manha"])
+    poi.append([-26.301289513710334, -48.844462116106380, 05.0, 08.0, "Terminal_Centro_Manha"])
     poi.append([-26.301289513710334, -48.844462116106380, 17.0, 19.0, "Terminal_Centro_Tarde"])
-    poi.append([-26.273045033616377, -48.850776060285575, 06.0, 08.0, "Terminal_Norte_Manha"])
+    poi.append([-26.273045033616377, -48.850776060285575, 05.0, 08.0, "Terminal_Norte_Manha"])
     poi.append([-26.273045033616377, -48.850776060285575, 17.0, 19.0, "Terminal_Norte_Tarde"])
     poi.append([-26.288328365610113, -48.810846717956740, 08.0, 17.0, "Tupy"])
     poi.append([-26.303556261544664, -48.848987585420980, 18.0, 23.0, "Shopping_Muller"])
     poi.append([-26.252303610588786, -48.852610343093396, 18.0, 23.0, "Shopping_Garten"])
     for p in poi:  # transform hours to minutes
-        p[2] = p[2] * 60 - DAY_START_IN_MINUTES
-        p[3] = p[3] * 60 - DAY_START_IN_MINUTES
+        p[2] = int(p[2] * 60)
+        p[3] = int(p[3] * 60)
     poi_data = {
         poi_header[0]: [pi[0] for pi in poi],
         poi_header[1]: [pi[1] for pi in poi],
