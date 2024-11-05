@@ -46,7 +46,7 @@ SERVICE_DEMANDS = uniform(
 )
 
 USERS_MIN, USERS_MAX = 1, 10
-USER_SPEED_MIN, USER_SPEED_MAX = 1, 3
+USER_SPEED_MIN, USER_SPEED_MAX = 3, 8
 NUMBER_OF_CLOUD_BASE_STATIONS = SERVERS_PER_SPEC_CLOUD_PROVIDERS  # must have an integer square root
 CLOUD_GRID_OFFSET = 10
 CLOUD_LINK_DELAY = 10
@@ -204,10 +204,9 @@ def create_providers(grid_coordinates: list[tuple[int, int]]):
                     user.chance_of_becoming_interested = 40
                     user.movement_distance = random.randint(USER_SPEED_MIN, USER_SPEED_MAX)
                     user._set_initial_position(
-                        coordinates=espy.User.random_user_placement(grid_coordinates),  # type: ignore  # TODO: review this tuple vs list issue
+                        coordinates=espy.User.random_user_placement(grid_coordinates),
                         number_of_replicates=2,
                     )
-                    user.point_of_interest = user.step_point_of_interest()
 
                     # Defining user's access pattern
                     espy.CircularDurationAndIntervalAccessPattern(
