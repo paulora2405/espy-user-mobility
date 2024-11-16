@@ -152,9 +152,9 @@ def translate_to_hexagonal_grid(df: pd.DataFrame) -> pd.DataFrame:
         raise Exception("Dataframe does not contain both 'Latitude' and 'Longitude' columns")
 
 
-def to_tuple_list(df: pd.DataFrame) -> list[tuple[int, int]]:
+def to_tuple_list(df: pd.DataFrame) -> list[tuple[float, float]]:
     if "Longitude" in df.columns and "Latitude" in df.columns:
-        return list(zip(df["Longitude"], df["Latitude"]))
+        return list(zip(df["Longitude"].astype(np.float64), df["Latitude"].astype(np.float64)))
     else:
         raise Exception("Dataframe does not contain both 'Latitude' and 'Longitude' columns")
 
