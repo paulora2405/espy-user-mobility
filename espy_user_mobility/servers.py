@@ -1,7 +1,6 @@
 from EdgeSimPy import edge_sim_py as espy
 
-SERVERS_PER_SPEC_TRUSTED_PROVIDERS = 100
-SERVERS_PER_SPEC_UNTRUSTED_PROVIDER = 400
+SERVERS_PER_SPEC_EDGE_PROVIDERS = 100
 SERVERS_PER_SPEC_CLOUD_PROVIDERS = 4  # must have an integer square root
 
 # Defining specifications for container images and container registries
@@ -163,25 +162,9 @@ PROVIDER_SPECS = [
     {
         "id": 1,
         "edge_server_specs": [
-            {"spec": sgi_rackable_c2112_4g10, "number_of_objects": SERVERS_PER_SPEC_TRUSTED_PROVIDERS},
-            {"spec": proliant_dl360_gen9, "number_of_objects": SERVERS_PER_SPEC_TRUSTED_PROVIDERS},
-            {"spec": ar585_f1, "number_of_objects": SERVERS_PER_SPEC_TRUSTED_PROVIDERS},
-        ],
-    },
-    {
-        "id": 2,
-        "edge_server_specs": [
-            {"spec": sgi_rackable_c2112_4g10, "number_of_objects": SERVERS_PER_SPEC_TRUSTED_PROVIDERS},
-            {"spec": proliant_dl360_gen9, "number_of_objects": SERVERS_PER_SPEC_TRUSTED_PROVIDERS},
-            {"spec": ar585_f1, "number_of_objects": SERVERS_PER_SPEC_TRUSTED_PROVIDERS},
-        ],
-    },
-    {
-        "id": 3,
-        "edge_server_specs": [
-            {"spec": sgi_rackable_c2112_4g10, "number_of_objects": SERVERS_PER_SPEC_UNTRUSTED_PROVIDER},
-            {"spec": proliant_dl360_gen9, "number_of_objects": SERVERS_PER_SPEC_UNTRUSTED_PROVIDER},
-            {"spec": ar585_f1, "number_of_objects": SERVERS_PER_SPEC_UNTRUSTED_PROVIDER},
+            {"spec": sgi_rackable_c2112_4g10, "number_of_objects": SERVERS_PER_SPEC_EDGE_PROVIDERS},
+            {"spec": proliant_dl360_gen9, "number_of_objects": SERVERS_PER_SPEC_EDGE_PROVIDERS},
+            {"spec": ar585_f1, "number_of_objects": SERVERS_PER_SPEC_EDGE_PROVIDERS},
         ],
     },
     {
