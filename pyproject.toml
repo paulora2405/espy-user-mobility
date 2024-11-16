@@ -5,18 +5,19 @@ description = "Reseach project for Master's Thesis"
 authors = ["Paulo Roberto Albuquerque <paulora2405@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<4.0.0"
+python = ">=3.11"
 matplotlib = "^3.9.2"
 pandas = "^2.2.3"
-seaborn = "^0.12"
-networkx = "^3.3"
+seaborn = "^0.13.2"
+networkx = "^3.4.2"
 msgpack = "^1.1.0"
 scikit-learn = "^1.5.2"
 mesa = "~1.0.0"
+faker = "^33.0.0"
 
 [tool.poetry.dev-dependencies]
-ipykernel = "^6.15.2"
-black = "^22.8.0"
+ipykernel = "^6.29.5"
+black = "^24.10.0"
 isort = "^5.13.2"
 
 [build-system]
