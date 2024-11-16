@@ -1,10 +1,11 @@
 #!/bin/env python3
 import numpy as np
 import pandas as pd
-
-from EdgeSimPy.edge_sim_py.components.point_of_interest import DAY_START_IN_MINUTES
+from faker import Faker
+from faker.providers import company
 
 COORD_LOWER_BOUND, COORD_UPPER_BOUND = 0, 100
+NUMBER_OF_POINT_OF_INTERESTS = 30
 
 # The pair of coordinates correspond to two points on the map,
 # which are used to create a bounding box rectangle.
@@ -86,29 +87,38 @@ def create_edge_servers_df(csv_filepath="./datasets/geo-dataset-724.csv", boundi
 
 
 def create_points_of_interest_df(bounding_box_normalization=True) -> pd.DataFrame:
+    fake = Faker()
+    fake.add_provider(company)
+
     # Points of interest
     poi = []
     poi_header = ["Latitude", "Longitude", "PeakStart", "PeakEnd", "Name"]
-    poi.append([-26.263246003308190, -48.861225375722130, 07.5, 17.5, "Doller"])
-    poi.append([-26.252990373029380, -48.854708408036230, 08.0, 17.0, "UDESC"])
-    poi.append([-26.319269027247838, -48.855449473777610, 18.0, 22.5, "Unisociesc"])
-    poi.append([-26.301289513710334, -48.844462116106380, 05.0, 08.0, "Terminal_Centro_Manha"])
-    poi.append([-26.301289513710334, -48.844462116106380, 17.0, 19.0, "Terminal_Centro_Tarde"])
-    poi.append([-26.273045033616377, -48.850776060285575, 05.0, 08.0, "Terminal_Norte_Manha"])
-    poi.append([-26.273045033616377, -48.850776060285575, 17.0, 19.0, "Terminal_Norte_Tarde"])
-    poi.append([-26.288328365610113, -48.810846717956740, 08.0, 17.0, "Tupy"])
-    poi.append([-26.303556261544664, -48.848987585420980, 18.0, 23.0, "Shopping_Muller"])
-    poi.append([-26.252303610588786, -48.852610343093396, 18.0, 23.0, "Shopping_Garten"])
-    for p in poi:  # transform hours to minutes
+    # poi.append([-26.263246003308190, -48.861225375722130, 07.5, 17.5, "Doller"])
+    # poi.append([-26.252990373029380, -48.854708408036230, 08.0, 17.0, "UDESC"])
+    # poi.append([-26.319269027247838, -48.855449473777610, 18.0, 22.5, "Unisociesc"])
+    # poi.append([-26.301289513710334, -48.844462116106380, 05.0, 08.0, "Terminal_Centro_Manha"])
+    # poi.append([-26.301289513710334, -48.844462116106380, 17.0, 19.0, "Terminal_Centro_Tarde"])
+    # poi.append([-26.273045033616377, -48.850776060285575, 05.0, 08.0, "Terminal_Norte_Manha"])
+    # poi.append([-26.273045033616377, -48.850776060285575, 17.0, 19.0, "Terminal_Norte_Tarde"])
+    # poi.append([-26.288328365610113, -48.810846717956740, 08.0, 17.0, "Tupy"])
+    # poi.append([-26.303556261544664, -48.848987585420980, 18.0, 23.0, "Shopping_Muller"])
+    # poi.append([-26.252303610588786, -48.852610343093396, 18.0, 23.0, "Shopping_Garten"])
+
+    for _ in range(NUMBER_OF_POINT_OF_INTERESTS):
+        latitude = fake.random.uniform(BOUNDING_BOX_STOP["Latitude"], BOUNDING_BOX_START["Latitude"])
+        longitude = fake.random.uniform(BOUNDING_BOX_STOP["Longitude"], BOUNDING_BOX_START["Longitude"])
+        peak_start = fake.random.uniform(5.0, 23.0)
+        peak_end = fake.random.uniform(peak_start, 23.0)
+        name = fake.company()
+        poi.append([latitude, longitude, peak_start, peak_end, name])
+
+    # transform hours to minutes
+    for p in poi:
         p[2] = int(p[2] * 60)
         p[3] = int(p[3] * 60)
-    poi_data = {
-        poi_header[0]: [pi[0] for pi in poi],
-        poi_header[1]: [pi[1] for pi in poi],
-        poi_header[2]: [pi[2] for pi in poi],
-        poi_header[3]: [pi[3] for pi in poi],
-        poi_header[4]: [pi[4] for pi in poi],
-    }
+
+    # create dictionary to create dataframe
+    poi_data = {header: [p[i] for p in poi] for i, header in enumerate(poi_header)}
 
     df_poi = pd.DataFrame(data=poi_data)
 
@@ -159,14 +169,23 @@ def to_tuple_list(df: pd.DataFrame) -> list[tuple[float, float]]:
         raise Exception("Dataframe does not contain both 'Latitude' and 'Longitude' columns")
 
 
-if __name__ == "__main__":
+def test():
     import matplotlib.pyplot as plt
-    from scenario_build import create_base_stations, create_grid
 
     import EdgeSimPy.edge_sim_py as espy
 
+    from .scenario_build import create_base_stations, create_grid
+    from .servers import PROVIDER_SPECS
+
     df_edgeservers = create_edge_servers_df("./datasets/geo-dataset-724.csv")
+    number_of_edge_servers = 0
+    for provider in PROVIDER_SPECS:
+        number_of_edge_servers += sum([spec["number_of_objects"] for spec in provider.get("edge_server_specs", [])])
+    print(f"{number_of_edge_servers = }")
+    df_edgeservers = df_edgeservers.sample(n=number_of_edge_servers).reset_index(drop=True)
+
     df_pois = create_points_of_interest_df()
+    print(df_pois)
     grid = create_grid()
     create_base_stations(grid)
     base_stations = espy.BaseStation.all()
@@ -187,4 +206,10 @@ if __name__ == "__main__":
     ax.set_ylabel("Normalized Latitude")
     # Show the plot
     plt.tight_layout(pad=0.1)
+    print("Showing the plot")
     plt.show()
+    print("Plot closed")
+
+
+if __name__ == "__main__":
+    test()
