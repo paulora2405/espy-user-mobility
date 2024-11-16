@@ -1,17 +1,11 @@
 import random
-import sys
 from math import sqrt
-
-import networkx as nx
-import numpy as np
-from mesa import Model
-from sklearn.cluster import KMeans
 
 from EdgeSimPy import edge_sim_py as espy
 
 from .custom_serialization import application_to_dict, edge_server_to_dict, service_to_dict, user_to_dict
 from .helper_methods import uniform
-from .map_build import COORD_LOWER_BOUND, COORD_UPPER_BOUND, create_edge_servers_df, create_points_of_interest_df, to_tuple_list
+from .map_build import COORD_UPPER_BOUND, create_edge_servers_df, create_points_of_interest_df, to_tuple_list
 from .servers import CONTAINER_REGISTRIES, PROVIDER_SPECS, SERVERS_PER_SPEC_CLOUD_PROVIDERS
 
 APPLICATION_SPECIFICATIONS = [
