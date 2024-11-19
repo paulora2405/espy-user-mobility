@@ -4,8 +4,12 @@ import pandas as pd
 from faker import Faker
 from faker.providers import company
 
+from EdgeSimPy.edge_sim_py.components.point_of_interest import DAY_END_IN_MINUTES, DAY_START_IN_MINUTES
+
 COORD_LOWER_BOUND, COORD_UPPER_BOUND = 0, 100
-NUMBER_OF_POINT_OF_INTERESTS = 30
+NUMBER_OF_POINT_OF_INTERESTS = 50
+MIN_PEAK_DURATION_POI_HOURS = 3
+
 
 # The pair of coordinates correspond to two points on the map,
 # which are used to create a bounding box rectangle.
@@ -107,15 +111,19 @@ def create_points_of_interest_df(bounding_box_normalization=True) -> pd.DataFram
     for _ in range(NUMBER_OF_POINT_OF_INTERESTS):
         latitude = fake.random.uniform(BOUNDING_BOX_STOP["Latitude"], BOUNDING_BOX_START["Latitude"])
         longitude = fake.random.uniform(BOUNDING_BOX_STOP["Longitude"], BOUNDING_BOX_START["Longitude"])
-        peak_start = fake.random.uniform(5.0, 23.0)
-        peak_end = fake.random.uniform(peak_start, 23.0)
+        peak_start = fake.random.uniform(
+            DAY_START_IN_MINUTES, DAY_END_IN_MINUTES - MIN_PEAK_DURATION_POI_HOURS * 60
+        )  # Adjusted to ensure at least N units of time for peak duration
+        peak_end = fake.random.uniform(
+            peak_start + MIN_PEAK_DURATION_POI_HOURS, DAY_END_IN_MINUTES
+        )  # Ensuring peak_end is at least N units after peak_start
         name = fake.company()
         poi.append([latitude, longitude, peak_start, peak_end, name])
 
     # transform hours to minutes
-    for p in poi:
-        p[2] = int(p[2] * 60)
-        p[3] = int(p[3] * 60)
+    # for p in poi:
+    #     p[2] = int(p[2] * 60)
+    #     p[3] = int(p[3] * 60)
 
     # create dictionary to create dataframe
     poi_data = {header: [p[i] for p in poi] for i, header in enumerate(poi_header)}
