@@ -1,6 +1,6 @@
 from EdgeSimPy import edge_sim_py as espy
 
-SERVERS_PER_SPEC_EDGE_PROVIDERS = 100
+SERVERS_PER_SPEC_EDGE_PROVIDERS = 30
 SERVERS_PER_SPEC_CLOUD_PROVIDERS = 4  # must have an integer square root
 
 # Defining specifications for container images and container registries
