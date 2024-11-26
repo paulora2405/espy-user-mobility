@@ -1,6 +1,8 @@
 import random
 from math import sqrt
 
+import pandas as pd
+
 from EdgeSimPy import edge_sim_py as espy
 
 from .custom_serialization import application_to_dict, edge_server_to_dict, service_to_dict, user_to_dict
@@ -39,7 +41,7 @@ SERVICE_DEMANDS = uniform(
     shuffle_distribution=True,
 )
 
-USERS_MIN, USERS_MAX = 1, 10
+USERS_MIN, USERS_MAX = 10, 30
 USER_SPEED_MIN, USER_SPEED_MAX = 0.3, 1.0
 USER_CHANGE_OF_BECOMING_INTERESTED = 10
 NUMBER_OF_CLOUD_BASE_STATIONS = SERVERS_PER_SPEC_CLOUD_PROVIDERS  # must have an integer square root
@@ -139,7 +141,7 @@ def create_cloud_servers(edge_topology: espy.Topology, edge_grid: list[tuple[int
     return edge_grid
 
 
-def create_edge_servers():
+def create_edge_servers() -> pd.DataFrame:
     print("Creating Edge Servers")
     # Creating clusters of network switches based on the number of specified edge servers
     number_of_edge_servers = 0
@@ -147,7 +149,8 @@ def create_edge_servers():
         number_of_edge_servers += sum([spec["number_of_objects"] for spec in provider.get("edge_server_specs", [])])
 
     edge_servers_df = create_edge_servers_df()
-    edge_server_coordinates = random.sample(to_tuple_list(edge_servers_df), number_of_edge_servers)
+    edge_servers_df = edge_servers_df.sample(n=number_of_edge_servers).reset_index(drop=True)
+    edge_server_coordinates = to_tuple_list(edge_servers_df)
 
     for provider_spec in PROVIDER_SPECS:
         for edge_server_spec in provider_spec.get("edge_server_specs", []):
@@ -171,6 +174,8 @@ def create_edge_servers():
                     attribute_name="coordinates", attribute_value=edge_server_coordinates[i]
                 )  # type: ignore
                 base_station._connect_to_edge_server(edge_server=edge_server)
+
+    return edge_servers_df
 
 
 def create_regitries():
@@ -243,7 +248,7 @@ def create_providers(grid_coordinates: list[tuple[int, int]]):
                     app.connect_to_service(service)
 
 
-def create_points_of_interest():
+def create_points_of_interest() -> pd.DataFrame:
     df_poi = create_points_of_interest_df()
     for index, row in df_poi.iterrows():
         poi = espy.PointOfInterest()
@@ -251,6 +256,8 @@ def create_points_of_interest():
         poi.peak_start = row["PeakStart"]
         poi.peak_end = row["PeakEnd"]
         poi.name = row["Name"]
+
+    return df_poi
 
 
 def export_scenario():
