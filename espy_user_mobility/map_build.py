@@ -2,13 +2,13 @@
 import numpy as np
 import pandas as pd
 from faker import Faker
-from faker.providers import company
 
 from EdgeSimPy.edge_sim_py.components.point_of_interest import DAY_END_IN_MINUTES, DAY_START_IN_MINUTES
 
 COORD_LOWER_BOUND, COORD_UPPER_BOUND = 0, 100
-NUMBER_OF_POINT_OF_INTERESTS = 50
-MIN_PEAK_DURATION_POI_HOURS = 3
+NUMBER_OF_POINT_OF_INTERESTS = 30
+MIN_PEAK_DURATION_POI_MINUTES = 2 * 60
+MAX_PEAK_DURATION_POI_MINUTES = 6 * 60
 
 
 # The pair of coordinates correspond to two points on the map,
@@ -92,7 +92,6 @@ def create_edge_servers_df(csv_filepath="./datasets/geo-dataset-724.csv", boundi
 
 def create_points_of_interest_df(bounding_box_normalization=True) -> pd.DataFrame:
     fake = Faker()
-    fake.add_provider(company)
 
     # Points of interest
     poi = []
@@ -108,16 +107,16 @@ def create_points_of_interest_df(bounding_box_normalization=True) -> pd.DataFram
     # poi.append([-26.303556261544664, -48.848987585420980, 18.0, 23.0, "Shopping_Muller"])
     # poi.append([-26.252303610588786, -48.852610343093396, 18.0, 23.0, "Shopping_Garten"])
 
-    for _ in range(NUMBER_OF_POINT_OF_INTERESTS):
+    for i in range(NUMBER_OF_POINT_OF_INTERESTS):
         latitude = fake.random.uniform(BOUNDING_BOX_STOP["Latitude"], BOUNDING_BOX_START["Latitude"])
         longitude = fake.random.uniform(BOUNDING_BOX_STOP["Longitude"], BOUNDING_BOX_START["Longitude"])
         peak_start = fake.random.uniform(
-            DAY_START_IN_MINUTES, DAY_END_IN_MINUTES - MIN_PEAK_DURATION_POI_HOURS * 60
+            DAY_START_IN_MINUTES, DAY_END_IN_MINUTES - MAX_PEAK_DURATION_POI_MINUTES
         )  # Adjusted to ensure at least N units of time for peak duration
         peak_end = fake.random.uniform(
-            peak_start + MIN_PEAK_DURATION_POI_HOURS, DAY_END_IN_MINUTES
-        )  # Ensuring peak_end is at least N units after peak_start
-        name = fake.company()
+            peak_start + MIN_PEAK_DURATION_POI_MINUTES, min(peak_start + MAX_PEAK_DURATION_POI_MINUTES, DAY_END_IN_MINUTES)
+        )  # Ensuring peak_end is at least N units after peak_start and within max duration
+        name = f"POI_{chr(65 + i // 26)}{chr(65 + i % 26)}"
         poi.append([latitude, longitude, peak_start, peak_end, name])
 
     # transform hours to minutes
@@ -177,9 +176,7 @@ def to_tuple_list(df: pd.DataFrame) -> list[tuple[float, float]]:
         raise Exception("Dataframe does not contain both 'Latitude' and 'Longitude' columns")
 
 
-def test():
-    import matplotlib.pyplot as plt
-
+def test_gen_plots():
     import EdgeSimPy.edge_sim_py as espy
 
     from .scenario_build import create_base_stations, create_grid
@@ -191,33 +188,71 @@ def test():
         number_of_edge_servers += sum([spec["number_of_objects"] for spec in provider.get("edge_server_specs", [])])
     print(f"{number_of_edge_servers = }")
     df_edgeservers = df_edgeservers.sample(n=number_of_edge_servers).reset_index(drop=True)
-
     df_pois = create_points_of_interest_df()
     print(df_pois)
+
     grid = create_grid()
     create_base_stations(grid)
+
     base_stations = espy.BaseStation.all()
     bs_coords = [b.coordinates for b in base_stations]
-    # Create a figure and axis object
+
+    plot_grid(bs_coords, df_edgeservers, df_pois)
+    plot_points_of_interest(df_pois)
+
+
+def plot_grid(
+    basestations_coordinates: list[tuple[int, int]],
+    df_edgeservers: pd.DataFrame,
+    df_pois: pd.DataFrame,
+    save_path: str | None = None,
+):
+    import matplotlib.pyplot as plt
+
     fig, ax = plt.subplots()
     plot_size = 12
     fig.set_size_inches(plot_size, plot_size)
-    # Plot the coordinates as a map
     for i, coord in enumerate(df_pois.Latitude):
         ax.plot([df_pois.Longitude[i]], [df_pois.Latitude[i]], "o", markersize=8, color="red")
     for i, coord in enumerate(df_edgeservers.Latitude):
         ax.plot([df_edgeservers.Longitude[i]], [df_edgeservers.Latitude[i]], "o", markersize=3, color="blue")
-    for coord in bs_coords:
+    for coord in basestations_coordinates:
         ax.plot([coord[0]], [coord[1]], "o", markersize=1, color="green")
-    # Set the axis labels
+    red_patch = plt.Line2D([0], [0], marker="o", color="w", markerfacecolor="red", markersize=6, label="Points of Interest")  # type: ignore
+    blue_patch = plt.Line2D([0], [0], marker="o", color="w", markerfacecolor="blue", markersize=6, label="Edge/Cloud Servers")  # type: ignore
+    green_patch = plt.Line2D([0], [0], marker="o", color="w", markerfacecolor="green", markersize=6, label="Base Stations")  # type: ignore
+    ax.legend(handles=[red_patch, blue_patch, green_patch], loc="upper left", ncol=3)
     ax.set_xlabel("Normalized Longitude")
     ax.set_ylabel("Normalized Latitude")
-    # Show the plot
     plt.tight_layout(pad=0.1)
-    print("Showing the plot")
-    plt.show()
-    print("Plot closed")
+    if save_path is not None:
+        plt.savefig(save_path)
+    else:
+        plt.show()
+
+
+def plot_points_of_interest(df_pois: pd.DataFrame, save_path: str | None = None):
+    import random
+
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots()
+    fig.set_size_inches(14, 6)
+    for i, row in df_pois.iterrows():
+        color = (random.random(), random.random(), random.random())
+        ax.barh(i, row["PeakEnd"] - row["PeakStart"], left=row["PeakStart"], color=color, edgecolor="black")  # type: ignore
+    ax.set_yticks(range(len(df_pois)))
+    ax.set_yticklabels(df_pois["Name"])
+    ax.set_xlim(DAY_START_IN_MINUTES, DAY_END_IN_MINUTES)
+    ax.set_xlabel("Time (minutes)")
+    ax.set_ylabel("Points of Interest")
+    ax.set_title("Peak Duration for Points of Interest")
+    plt.tight_layout(pad=0.1)
+    if save_path is not None:
+        plt.savefig(save_path)
+    else:
+        plt.show()
 
 
 if __name__ == "__main__":
-    test()
+    test_gen_plots()
