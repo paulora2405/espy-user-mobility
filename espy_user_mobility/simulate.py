@@ -105,7 +105,7 @@ def main():
     )
 
     simulator = espy.Simulator(
-        dump_interval=5,
+        dump_interval=-1,
         tick_duration=1,
         tick_unit="minutes",
         stopping_criterion=stopping_criterion,
