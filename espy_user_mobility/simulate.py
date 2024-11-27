@@ -80,6 +80,7 @@ def generate_dataset():
 def main():
     if len(sys.argv) == 4:
         try:
+            global DISTANCE_THRESHOLD, MIGRATION_RECENCY_THRESHOLD, STEPS_LIMIT
             DISTANCE_THRESHOLD = float(sys.argv[1])
             MIGRATION_RECENCY_THRESHOLD = int(sys.argv[2])
             STEPS_LIMIT = int(sys.argv[3])
@@ -90,13 +91,26 @@ def main():
 
     generate_dataset()
 
+    logs_dir = (
+        "logs/"
+        f"{DISTANCE_THRESHOLD}dist-{MIGRATION_RECENCY_THRESHOLD}migr-{STEPS_LIMIT}steps/"
+        f"{time.strftime('%Y-%m-%d_%H-%M-%S')}"
+    )
+
+    print(
+        "Initializing simulator with parameters:"
+        f"\n- Distance threshold: {DISTANCE_THRESHOLD}"
+        f"\n- Migration recency threshold: {MIGRATION_RECENCY_THRESHOLD}"
+        f"\n- Steps limit: {STEPS_LIMIT}"
+    )
+
     simulator = espy.Simulator(
         dump_interval=5,
         tick_duration=1,
         tick_unit="minutes",
         stopping_criterion=stopping_criterion,
         resource_management_algorithm=resource_management_algorithm,
-        logs_directory=f"logs/{DISTANCE_THRESHOLD}dist-{MIGRATION_RECENCY_THRESHOLD}migr-{STEPS_LIMIT}steps/{time.strftime('%Y-%m-%d_%H-%M-%S')}",
+        logs_directory=logs_dir,
     )
 
     print("Initializing simulation")
