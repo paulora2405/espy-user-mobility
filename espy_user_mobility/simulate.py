@@ -29,7 +29,8 @@ def resource_management_algorithm(parameters):
     for service in espy.Service.all():
         # Initial allocation
         edge_servers: list[espy.EdgeServer] = espy.EdgeServer.all()
-        edge_servers.sort(reverse=True, key=lambda server: server.current_capacity_score())
+        edge_servers = [server for server in edge_servers if server.has_capacity_to_host(service)]
+        edge_servers.sort(reverse=False, key=lambda server: service.distance_from_edge_server_to_users(server))
         if service.server is None and not service.being_provisioned:
             for edge_server in edge_servers:
                 if edge_server.has_capacity_to_host(service=service):
